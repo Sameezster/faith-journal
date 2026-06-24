@@ -1,0 +1,15 @@
+name: backend-ci
+on:
+  push: { paths: ["services/api/**", ".github/workflows/backend_ci.yaml"] }
+  pull_request: { paths: ["services/api/**"] }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: services/api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install fastapi "uvicorn[standard]" pydantic pydantic-settings sqlalchemy alembic aiosqlite firebase-admin httpx pytest ruff
+      - run: ruff check app
+      - run: AI_PROVIDER=keyword AUTH_REQUIRED=false python -m pytest -q

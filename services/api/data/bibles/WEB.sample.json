@@ -1,0 +1,44 @@
+{
+  "code": "WEB",
+  "name": "World English Bible",
+  "language": "en",
+  "license": "public_domain",
+  "books": [
+    {
+      "osis": "Isa", "name": "Isaiah", "testament": "OT", "order": 23,
+      "chapters": {
+        "41": [
+          "Keep silence before me, islands, and let the peoples renew their strength.",
+          "Don't you be afraid, for I am with you. Don't be dismayed, for I am your God. I will strengthen you. Yes, I will help you. Yes, I will uphold you with the right hand of my righteousness."
+        ]
+      }
+    },
+    {
+      "osis": "Jer", "name": "Jeremiah", "testament": "OT", "order": 24,
+      "chapters": {
+        "29": [
+          "For I know the thoughts that I think toward you, says Yahweh, thoughts of peace, and not of evil, to give you hope and a future."
+        ]
+      }
+    },
+    {
+      "osis": "John", "name": "John", "testament": "NT", "order": 43,
+      "chapters": {
+        "3": [
+          "Now there was a man of the Pharisees named Nicodemus, a ruler of the Jews.",
+          "He came to him by night, and said to him, \"Rabbi, we know that you are a teacher come from God, for no one can do these signs that you do, unless God is with him.\"",
+          "Jesus answered him, \"Most certainly I tell you, unless one is born anew, he can't see God's Kingdom.\"",
+          "For God so loved the world, that he gave his one and only Son, that whoever believes in him should not perish, but have eternal life."
+        ]
+      }
+    },
+    {
+      "osis": "Phil", "name": "Philippians", "testament": "NT", "order": 50,
+      "chapters": {
+        "4": [
+          "I can do all things through Christ, who strengthens me."
+        ]
+      }
+    }
+  ]
+}

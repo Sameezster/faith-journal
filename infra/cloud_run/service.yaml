@@ -1,0 +1,22 @@
+# Cloud Run service for the Faith Journal API (deploy via gcloud or Terraform).
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: faith-journal-api
+spec:
+  template:
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT/faith-journal/api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ENVIRONMENT
+              value: prod
+            - name: AI_PROVIDER
+              value: gemini
+            - name: AUTH_REQUIRED
+              value: "true"
+          # Secrets (GEMINI_API_KEY, DATABASE_URL, GOOGLE_APPLICATION_CREDENTIALS)
+          # are mounted from Secret Manager.
+      timeoutSeconds: 30

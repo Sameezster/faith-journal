@@ -1,0 +1,140 @@
+<svg viewBox="0 0 1240 880" xmlns="http://www.w3.org/2000/svg" font-family="Poppins, 'Segoe UI', Arial, sans-serif">
+  <defs>
+    <style>
+      .h1 { font-size: 26px; font-weight: 700; fill: #2f3342; }
+      .sub { font-size: 14px; fill: #6b6f7d; }
+      .lane { font-size: 15px; font-weight: 700; fill: #864797; letter-spacing: .5px; }
+      .box-title { font-size: 15px; font-weight: 700; fill: #ffffff; }
+      .box-sub { font-size: 11.5px; fill: #e7e2ee; }
+      .chip-title { font-size: 13px; font-weight: 700; fill: #2f3342; }
+      .chip-sub { font-size: 10.5px; fill: #6b6f7d; }
+      .edge { stroke: #864797; stroke-width: 2; fill: none; }
+      .edge-y { stroke: #d9c400; stroke-width: 2.5; fill: none; }
+      .edgelbl { font-size: 10.5px; fill: #6b6f7d; font-weight: 600; }
+      .footer { font-size: 11px; fill: #bfbfbf; }
+    </style>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#864797"/>
+    </marker>
+    <marker id="arrowY" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#d9c400"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1240" height="880" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="48" class="h1">Faith Journal — System Architecture</text>
+  <text x="40" y="72" class="sub">Mobile-first MVP · Firebase-first data &amp; identity · FastAPI service layer for AI + Bible · Web portal (Phase 2)</text>
+  <line x1="40" y1="88" x2="1200" y2="88" stroke="#ececec" stroke-width="1.5"/>
+
+  <!-- ================= CLIENTS LANE ================= -->
+  <text x="40" y="124" class="lane">CLIENTS</text>
+
+  <!-- Mobile -->
+  <rect x="40" y="138" width="300" height="84" rx="14" fill="#2f3342"/>
+  <text x="62" y="170" class="box-title">Flutter Mobile App</text>
+  <text x="62" y="190" class="box-sub">Android · iOS  ·  Riverpod · GoRouter · Dio</text>
+  <text x="62" y="207" class="box-sub">Freezed · Hooks · Secure Storage · Offline cache</text>
+
+  <!-- Web portal phase 2 -->
+  <rect x="372" y="138" width="300" height="84" rx="14" fill="#2f3342" opacity="0.55" stroke="#864797" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="394" y="170" class="box-title">Flutter Web Portal</text>
+  <text x="394" y="190" class="box-sub">Read-only dashboard · Auth required</text>
+  <text x="394" y="207" class="box-sub">Phase 2 · reuses shared data layer</text>
+
+  <!-- ================= PLATFORM LANE ================= -->
+  <text x="40" y="280" class="lane">FIREBASE</text>
+  <text x="700" y="280" class="lane">FASTAPI SERVICE LAYER (Clean Architecture)</text>
+
+  <!-- Firebase container -->
+  <rect x="40" y="294" width="600" height="300" rx="16" fill="#f6f3fa" stroke="#864797" stroke-width="1.5"/>
+  <!-- firebase chips -->
+  <rect x="62" y="318" width="260" height="70" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="80" y="346" class="chip-title">Firebase Auth</text>
+  <text x="80" y="366" class="chip-sub">Email/Password · Google · Apple</text>
+
+  <rect x="358" y="318" width="260" height="70" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="376" y="346" class="chip-title">Cloud Firestore</text>
+  <text x="376" y="366" class="chip-sub">User data · real-time · offline (system of record)</text>
+
+  <rect x="62" y="402" width="260" height="70" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="80" y="430" class="chip-title">Firebase Storage</text>
+  <text x="80" y="450" class="chip-sub">Voice notes · avatars</text>
+
+  <rect x="358" y="402" width="260" height="70" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="376" y="430" class="chip-title">Cloud Messaging (FCM)</text>
+  <text x="376" y="450" class="chip-sub">Daily-verse push</text>
+
+  <rect x="62" y="486" width="556" height="86" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="80" y="514" class="chip-title">Cloud Functions</text>
+  <text x="80" y="534" class="chip-sub">Scheduled daily-verse send · journal_index fan-out · FCM token mgmt</text>
+  <text x="80" y="553" class="chip-sub">Owner-only security rules enforce request.auth.uid == uid</text>
+
+  <!-- FastAPI container -->
+  <rect x="700" y="294" width="500" height="300" rx="16" fill="#f6f3fa" stroke="#864797" stroke-width="1.5"/>
+  <rect x="722" y="318" width="456" height="40" rx="10" fill="#864797"/>
+  <text x="740" y="343" class="box-title">API  ›  Application  ›  Domain  ›  Infrastructure</text>
+
+  <rect x="722" y="372" width="220" height="74" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="740" y="400" class="chip-title">AI Categorization</text>
+  <text x="740" y="419" class="chip-sub">POST /ai/categorize</text>
+  <text x="740" y="435" class="chip-sub">suggest-only · 11-tag taxonomy</text>
+
+  <rect x="958" y="372" width="220" height="74" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="976" y="400" class="chip-title">Bible Content</text>
+  <text x="976" y="419" class="chip-sub">/bible/{t}/{book}/{ch}</text>
+  <text x="976" y="435" class="chip-sub">books · chapters · fast load</text>
+
+  <rect x="722" y="458" width="220" height="74" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="740" y="486" class="chip-title">Smart Search</text>
+  <text x="740" y="505" class="chip-sub">/bible/search (Postgres FTS)</text>
+  <text x="740" y="521" class="chip-sub">cross-translation · ranked</text>
+
+  <rect x="958" y="458" width="220" height="74" rx="12" fill="#ffffff" stroke="#e3dcec"/>
+  <text x="976" y="486" class="chip-title">Auth Verify</text>
+  <text x="976" y="505" class="chip-sub">Firebase Admin SDK</text>
+  <text x="976" y="521" class="chip-sub">verifies ID token, resolves uid</text>
+
+  <text x="722" y="560" class="chip-sub">Stateless · containerized on Cloud Run · horizontally scalable · OpenAPI at /docs</text>
+
+  <!-- ================= DATA / PROVIDERS LANE ================= -->
+  <text x="700" y="640" class="lane">DATA &amp; EXTERNAL PROVIDERS</text>
+
+  <rect x="700" y="654" width="150" height="92" rx="14" fill="#2f3342"/>
+  <text x="718" y="684" class="box-title">PostgreSQL</text>
+  <text x="718" y="704" class="box-sub">Bible text + FTS</text>
+  <text x="718" y="721" class="box-sub">taxonomy · logs</text>
+
+  <rect x="866" y="654" width="160" height="92" rx="14" fill="#2f3342"/>
+  <text x="884" y="684" class="box-title">AI Providers</text>
+  <text x="884" y="704" class="box-sub">Gemini (default)</text>
+  <text x="884" y="721" class="box-sub">OpenAI* · keyword fb</text>
+
+  <rect x="1042" y="654" width="158" height="92" rx="14" fill="#2f3342"/>
+  <text x="1060" y="684" class="box-title">Bible Providers</text>
+  <text x="1060" y="704" class="box-sub">Bundled KJV/WEB</text>
+  <text x="1060" y="721" class="box-sub">External · Licensed*</text>
+
+  <!-- ================= EDGES ================= -->
+  <!-- mobile -> firebase -->
+  <path class="edge-y" d="M 300 222 L 300 294" marker-end="url(#arrowY)"/>
+  <text x="308" y="262" class="edgelbl">Firebase SDK</text>
+  <!-- mobile -> fastapi -->
+  <path class="edge" d="M 340 175 C 560 165, 600 255, 760 294" marker-end="url(#arrow)"/>
+  <text x="556" y="250" class="edgelbl">HTTPS + Firebase ID token</text>
+  <!-- web portal -> firebase (dashed implied) -->
+  <path class="edge" d="M 470 222 C 440 250, 420 270, 400 294" marker-end="url(#arrow)" stroke-dasharray="5 5"/>
+
+  <!-- fastapi -> postgres -->
+  <path class="edge" d="M 800 594 L 780 654" marker-end="url(#arrow)"/>
+  <!-- fastapi -> ai providers -->
+  <path class="edge" d="M 940 594 L 946 654" marker-end="url(#arrow)"/>
+  <!-- fastapi -> bible providers -->
+  <path class="edge" d="M 1080 594 L 1110 654" marker-end="url(#arrow)"/>
+
+  <!-- footer -->
+  <line x1="40" y1="800" x2="1200" y2="800" stroke="#ececec" stroke-width="1.5"/>
+  <text x="40" y="826" class="footer">Solid arrows = HTTPS/API · yellow = Firebase SDK · dashed = Phase 2 / server-only.  *Licensed (NIV/ESV) &amp; Tamil enabled via the same provider abstraction post-licensing.</text>
+  <text x="40" y="846" class="footer">User CRUD (verses · reflections · prayers · reminders) writes directly to Firestore; the FastAPI layer owns only AI, Bible content, and search.</text>
+</svg>

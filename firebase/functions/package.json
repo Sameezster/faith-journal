@@ -1,0 +1,10 @@
+{
+  "name": "faith-journal-functions",
+  "description": "Cloud Functions: daily-verse push, journal_index fan-out, FCM token cleanup.",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0"
+  }
+}

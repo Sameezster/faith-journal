@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.db
+.env
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.g.dart
+*.freezed.dart
+apps/mobile/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+# Node
+node_modules/
+# Secrets / credentials
+*serviceAccount*.json
+# OS / editor / tool noise
+.DS_Store
+.idea/
+*.iml
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+# macOS Finder duplicate leftovers ("foo 2.ext", "foo 2")
+* 2
+* 2.*

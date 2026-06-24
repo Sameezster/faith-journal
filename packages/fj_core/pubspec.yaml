@@ -1,0 +1,10 @@
+name: fj_core
+description: Shared fj_core package for Faith Journal (reused by mobile app and Phase-2 web portal).
+publish_to: "none"
+version: 0.1.0
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
