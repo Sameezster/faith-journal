@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:faith_journal/main.dart';
+import 'package:faith_journal/core/theme/app_theme.dart';
+import 'package:faith_journal/core/theme/tokens.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('AppTheme', () {
+    test('light theme builds with brand tokens', () {
+      final theme = AppTheme.light();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(theme.useMaterial3, isTrue);
+      expect(theme.colorScheme.primary, FjColors.gold500);
+      expect(theme.scaffoldBackgroundColor, FjColors.cream50);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    testWidgets('Material widgets render with the theme', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: Text('hello')),
+        ),
+      );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(find.text('hello'), findsOneWidget);
+      expect(find.byType(MaterialApp), findsOneWidget);
+    });
   });
 }
