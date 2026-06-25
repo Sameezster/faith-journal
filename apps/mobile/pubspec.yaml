@@ -37,7 +37,6 @@ dependencies:
   just_audio: ^0.9.38
   flutter_local_notifications: ^17.1.0
   # UI
-  google_fonts: ^6.2.1
   fj_core:
     path: ../../packages/fj_core
   fj_ui:
@@ -58,3 +57,14 @@ flutter:
   uses-material-design: true
   assets:
     - assets/bibles/
+  fonts:
+    - family: PlayfairDisplay
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay-VariableFont.ttf
+        - asset: assets/fonts/PlayfairDisplay-Italic-VariableFont.ttf
+          style: italic
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VariableFont.ttf
+        - asset: assets/fonts/Inter-Italic-VariableFont.ttf
+          style: italic
