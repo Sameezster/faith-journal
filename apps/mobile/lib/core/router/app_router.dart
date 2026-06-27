@@ -11,6 +11,7 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/bible/presentation/screens/bible_browser_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/prayer/presentation/prayers_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -63,6 +64,16 @@ GoRouter router(RouterRef ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/reset-password', builder: (_, __) => const ResetPasswordScreen()),
+      // Journal editor (full-screen, outside the bottom-nav shell).
+      GoRoute(
+        path: '/journal/new',
+        builder: (_, __) => const JournalEditorScreen(),
+      ),
+      GoRoute(
+        path: '/journal/:id',
+        builder: (_, state) =>
+            JournalEditorScreen(entryId: state.pathParameters['id']),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => ShellScaffold(shell: shell),
         branches: [
