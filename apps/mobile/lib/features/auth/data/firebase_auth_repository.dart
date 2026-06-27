@@ -1,17 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../../shared/user/user_repository.dart';
 import '../domain/auth_repository.dart';
 
 /// Firebase-backed implementation of [AuthRepository].
 ///
+/// On every successful sign-in/sign-up, `_users.ensureProfile(...)` is called
+/// to create or refresh the corresponding `users/{uid}` Firestore document.
+///
 /// Apple sign-in is intentionally stubbed (`UnimplementedError`) until the
 /// Apple Developer account + Sign In with Apple capability are configured.
 class FirebaseAuthRepository implements AuthRepository {
-  FirebaseAuthRepository(this._auth, this._google);
+  FirebaseAuthRepository(this._auth, this._google, this._users);
 
   final fb.FirebaseAuth _auth;
   final GoogleSignIn _google;
+  final UserRepository _users;
 
   @override
   Stream<AppUser?> watchAuthState() =>
@@ -23,7 +28,9 @@ class FirebaseAuthRepository implements AuthRepository {
       email: email,
       password: password,
     );
-    return _toAppUser(cred.user)!;
+    final user = _toAppUser(cred.user)!;
+    await _users.ensureProfile(user);
+    return user;
   }
 
   @override
@@ -35,7 +42,9 @@ class FirebaseAuthRepository implements AuthRepository {
     );
     await cred.user?.updateDisplayName(name);
     await cred.user?.reload();
-    return _toAppUser(_auth.currentUser)!;
+    final user = _toAppUser(_auth.currentUser)!;
+    await _users.ensureProfile(user);
+    return user;
   }
 
   @override
@@ -53,7 +62,9 @@ class FirebaseAuthRepository implements AuthRepository {
       idToken: googleAuth.idToken,
     );
     final cred = await _auth.signInWithCredential(credential);
-    return _toAppUser(cred.user)!;
+    final user = _toAppUser(cred.user)!;
+    await _users.ensureProfile(user);
+    return user;
   }
 
   @override

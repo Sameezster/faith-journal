@@ -3,13 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
+import 'providers/profile_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).value;
+    final authUser = ref.watch(authStateProvider).value;
+    final profile = ref.watch(userProfileProvider).value;
+
+    // Firestore profile wins; fall back to Auth fields until the doc exists.
+    final displayName =
+        profile?.displayName ?? authUser?.displayName ?? 'Faith Journal user';
+    final email = profile?.email ?? authUser?.email ?? '';
+    final photoUrl = profile?.photoUrl ?? authUser?.photoUrl;
+    final joined = profile?.createdAt;
 
     return Scaffold(
       backgroundColor: FjColors.cream50,
@@ -19,8 +28,10 @@ class ProfileScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Profile & Settings',
-                  style: Theme.of(context).textTheme.displayLarge),
+              Text(
+                'Profile & Settings',
+                style: Theme.of(context).textTheme.displayLarge,
+              ),
               const SizedBox(height: FjSpacing.lg),
               Card(
                 child: Padding(
@@ -29,10 +40,9 @@ class ProfileScreen extends ConsumerWidget {
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: FjColors.gold300,
-                      backgroundImage: user?.photoUrl != null
-                          ? NetworkImage(user!.photoUrl!)
-                          : null,
-                      child: user?.photoUrl == null
+                      backgroundImage:
+                          photoUrl != null ? NetworkImage(photoUrl) : null,
+                      child: photoUrl == null
                           ? const Icon(Icons.person, color: Colors.white)
                           : null,
                     ),
@@ -42,13 +52,23 @@ class ProfileScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user?.displayName ?? 'Faith Journal user',
+                            displayName,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           Text(
-                            user?.email ?? '',
+                            email,
                             style: const TextStyle(color: FjColors.gray500),
                           ),
+                          if (joined != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Joined ${_formatDate(joined)}',
+                              style: const TextStyle(
+                                color: FjColors.gray500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -56,6 +76,19 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: FjSpacing.xxl),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.menu_book, color: FjColors.navy700),
+                  title: const Text('Preferred Bible translation'),
+                  subtitle: Text(profile?.preferredTranslation ?? 'KJV'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon')),
+                    );
+                  },
+                ),
+              ),
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: () => _confirmSignOut(context, ref),
@@ -68,6 +101,14 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static String _formatDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
@@ -90,6 +131,5 @@ class ProfileScreen extends ConsumerWidget {
     );
     if (confirmed != true) return;
     await ref.read(authRepositoryProvider).signOut();
-    // Router redirect handles navigation.
   }
 }
