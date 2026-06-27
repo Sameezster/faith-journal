@@ -30,8 +30,11 @@ class LocalBundledProvider:
     async def list_books(self, translation: str) -> list[Book]:
         t = self._translation_or_404(translation)
         return [
-            Book(osis_code=b["osis"], name=b["name"], testament=b["testament"],
-                 order=b["order"], chapter_count=len(b["chapters"]))
+            Book(
+                osis_code=b["osis"], name=b["name"], testament=b["testament"],
+                order=b["order"], chapter_count=len(b["chapters"]),
+                chapter_numbers=tuple(sorted(int(c) for c in b["chapters"].keys())),
+            )
             for b in t["books"]
         ]
 

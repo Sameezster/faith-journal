@@ -44,6 +44,10 @@ class Book:
     testament: str  # "OT" | "NT"
     order: int
     chapter_count: int
+    # Sorted list of chapter numbers actually present in the data. Sample
+    # translations may have only chapter 3 of John (etc.) — clients should
+    # navigate to the first available chapter, not assume chapter 1 exists.
+    chapter_numbers: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -1,36 +1,40 @@
 import 'package:dio/dio.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../core/network/dio_client.dart';
+import 'bible_models.dart';
 
-part 'bible_repository.g.dart';
-
-/// Bible repository: fetches from FastAPI /bible and caches chapters on device
-/// (Hive/Drift) for offline reading. Cache wiring is a TODO behind this interface.
+/// Bible repository — fetches from FastAPI `/bible/*` endpoints and returns
+/// typed models. On-device cache (Hive/Drift) for offline reading is a TODO.
 class BibleRepository {
   BibleRepository(this._dio);
   final Dio _dio;
 
-  Future<Map<String, dynamic>> getChapter(String translation, String book, int chapter) async {
-    // TODO: check local cache first; on miss fetch + cache.
-    final res = await _dio.get('/bible/$translation/$book/$chapter');
-    return res.data as Map<String, dynamic>;
+  Future<List<Translation>> getTranslations() async {
+    final res = await _dio.get('/bible/translations');
+    final list = (res.data['translations'] as List).cast<Map<String, dynamic>>();
+    return list.map(Translation.fromJson).toList();
   }
 
-  Future<Map<String, dynamic>> getBooks(String translation) async {
+  Future<BookList> getBooks(String translation) async {
     final res = await _dio.get('/bible/$translation/books');
-    return res.data as Map<String, dynamic>;
+    return BookList.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<List<dynamic>> search(String query, {String? translation}) async {
+  Future<Chapter> getChapter(String translation, String book, int chapter) async {
+    final res = await _dio.get('/bible/$translation/$book/$chapter');
+    return Chapter.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<List<SearchHit>> search(
+    String query, {
+    String? translation,
+    int limit = 50,
+  }) async {
     final res = await _dio.get('/bible/search', queryParameters: {
       'q': query,
       if (translation != null) 'translation': translation,
+      'limit': limit,
     });
-    return res.data['results'] as List<dynamic>;
+    final list = (res.data['results'] as List).cast<Map<String, dynamic>>();
+    return list.map(SearchHit.fromJson).toList();
   }
 }
-
-@riverpod
-BibleRepository bibleRepository(BibleRepositoryRef ref) =>
-    BibleRepository(ref.watch(dioProvider));

@@ -18,6 +18,7 @@ class BookOut(BaseModel):
     name: str
     order: int
     chapter_count: int
+    chapter_numbers: list[int] = []
 
 
 class BooksResponse(BaseModel):

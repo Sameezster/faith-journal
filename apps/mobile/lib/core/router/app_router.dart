@@ -10,6 +10,8 @@ import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/bible/presentation/screens/bible_browser_screen.dart';
+import '../../features/bible/presentation/screens/bible_chapter_screen.dart';
+import '../../features/bible/presentation/screens/bible_search_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
@@ -73,6 +75,19 @@ GoRouter router(RouterRef ref) {
         path: '/journal/:id',
         builder: (_, state) =>
             JournalEditorScreen(entryId: state.pathParameters['id']),
+      ),
+      // Bible search + chapter reader (full-screen).
+      GoRoute(
+        path: '/bible/search',
+        builder: (_, __) => const BibleSearchScreen(),
+      ),
+      GoRoute(
+        path: '/bible/:translation/:book/:chapter',
+        builder: (_, state) => BibleChapterScreen(
+          translation: state.pathParameters['translation']!,
+          book: state.pathParameters['book']!,
+          chapter: int.parse(state.pathParameters['chapter']!),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => ShellScaffold(shell: shell),

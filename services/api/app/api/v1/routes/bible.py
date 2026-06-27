@@ -28,9 +28,11 @@ async def books(
     items = await uc.execute(translation)
     grouped: dict[str, list] = {"OT": [], "NT": []}
     for b in sorted(items, key=lambda x: x.order):
-        grouped.setdefault(b.testament, []).append(
-            {"osis_code": b.osis_code, "name": b.name, "order": b.order, "chapter_count": b.chapter_count}
-        )
+        grouped.setdefault(b.testament, []).append({
+            "osis_code": b.osis_code, "name": b.name, "order": b.order,
+            "chapter_count": b.chapter_count,
+            "chapter_numbers": list(b.chapter_numbers),
+        })
     return BooksResponse(translation=translation, testaments=grouped)
 
 
