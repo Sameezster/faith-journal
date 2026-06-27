@@ -13,8 +13,11 @@ class CategorySuggestion {
   final double confidence;
 
   factory CategorySuggestion.fromJson(Map<String, dynamic> j) =>
-      CategorySuggestion(j['slug'] as String, j['label'] as String,
-          (j['confidence'] as num).toDouble());
+      CategorySuggestion(
+        j['slug'] as String,
+        j['label'] as String,
+        (j['confidence'] as num).toDouble(),
+      );
 }
 
 /// Calls FastAPI POST /ai/categorize. Never blocks the save flow: callers should
@@ -28,11 +31,14 @@ class AiService {
     String context = 'reflection',
     int maxSuggestions = 3,
   }) async {
-    final res = await _dio.post('/ai/categorize', data: {
-      'text': text,
-      'context': context,
-      'max_suggestions': maxSuggestions,
-    });
+    final res = await _dio.post(
+      '/ai/categorize',
+      data: {
+        'text': text,
+        'context': context,
+        'max_suggestions': maxSuggestions,
+      },
+    );
     final list = (res.data['suggestions'] as List).cast<Map<String, dynamic>>();
     return list.map(CategorySuggestion.fromJson).toList();
   }

@@ -10,7 +10,8 @@ class BibleRepository {
 
   Future<List<Translation>> getTranslations() async {
     final res = await _dio.get('/bible/translations');
-    final list = (res.data['translations'] as List).cast<Map<String, dynamic>>();
+    final list =
+        (res.data['translations'] as List).cast<Map<String, dynamic>>();
     return list.map(Translation.fromJson).toList();
   }
 
@@ -19,7 +20,8 @@ class BibleRepository {
     return BookList.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<Chapter> getChapter(String translation, String book, int chapter) async {
+  Future<Chapter> getChapter(
+      String translation, String book, int chapter) async {
     final res = await _dio.get('/bible/$translation/$book/$chapter');
     return Chapter.fromJson(res.data as Map<String, dynamic>);
   }
@@ -29,11 +31,14 @@ class BibleRepository {
     String? translation,
     int limit = 50,
   }) async {
-    final res = await _dio.get('/bible/search', queryParameters: {
-      'q': query,
-      if (translation != null) 'translation': translation,
-      'limit': limit,
-    });
+    final res = await _dio.get(
+      '/bible/search',
+      queryParameters: {
+        'q': query,
+        if (translation != null) 'translation': translation,
+        'limit': limit,
+      },
+    );
     final list = (res.data['results'] as List).cast<Map<String, dynamic>>();
     return list.map(SearchHit.fromJson).toList();
   }

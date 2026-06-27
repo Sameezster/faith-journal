@@ -126,23 +126,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 style: TextStyle(color: FjColors.gray500),
               ),
               const SizedBox(height: FjSpacing.md),
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : _signInWithGoogle,
-                    icon: const Icon(Icons.g_mobiledata),
-                    label: const Text('Google'),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _signInWithGoogle,
+                      icon: const Icon(Icons.g_mobiledata),
+                      label: const Text('Google'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FjSpacing.md),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.apple),
-                    label: const Text('Apple'),
+                  const SizedBox(width: FjSpacing.md),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.apple),
+                      label: const Text('Apple'),
+                    ),
                   ),
-                ),
-              ]),
+                ],
+              ),
               TextButton(
                 onPressed: _busy ? null : () => context.go('/register'),
                 child: const Text("Don't have an account? Sign Up"),

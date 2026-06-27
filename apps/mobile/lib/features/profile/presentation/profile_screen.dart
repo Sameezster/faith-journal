@@ -36,43 +36,45 @@ class ProfileScreen extends ConsumerWidget {
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(FjSpacing.lg),
-                  child: Row(children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: FjColors.gold300,
-                      backgroundImage:
-                          photoUrl != null ? NetworkImage(photoUrl) : null,
-                      child: photoUrl == null
-                          ? const Icon(Icons.person, color: Colors.white)
-                          : null,
-                    ),
-                    const SizedBox(width: FjSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            displayName,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          Text(
-                            email,
-                            style: const TextStyle(color: FjColors.gray500),
-                          ),
-                          if (joined != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Joined ${_formatDate(joined)}',
-                              style: const TextStyle(
-                                color: FjColors.gray500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ],
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: FjColors.gold300,
+                        backgroundImage:
+                            photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child: photoUrl == null
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
                       ),
-                    ),
-                  ]),
+                      const SizedBox(width: FjSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayName,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            Text(
+                              email,
+                              style: const TextStyle(color: FjColors.gray500),
+                            ),
+                            if (joined != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Joined ${_formatDate(joined)}',
+                                style: const TextStyle(
+                                  color: FjColors.gray500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: FjSpacing.xxl),
@@ -105,8 +107,18 @@ class ProfileScreen extends ConsumerWidget {
 
   static String _formatDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }

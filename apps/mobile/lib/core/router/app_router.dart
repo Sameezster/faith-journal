@@ -61,11 +61,14 @@ GoRouter router(RouterRef ref) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+      GoRoute(
+          path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
       GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      GoRoute(path: '/reset-password', builder: (_, __) => const ResetPasswordScreen()),
+      GoRoute(
+          path: '/reset-password',
+          builder: (_, __) => const ResetPasswordScreen()),
       // Journal editor (full-screen, outside the bottom-nav shell).
       GoRoute(
         path: '/journal/new',
@@ -92,21 +95,36 @@ GoRouter router(RouterRef ref) {
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => ShellScaffold(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/bible', builder: (_, __) => const BibleBrowserScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/journal', builder: (_, __) => const JournalScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/prayer', builder: (_, __) => const PrayersScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-          ]),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                  path: '/bible',
+                  builder: (_, __) => const BibleBrowserScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                  path: '/journal', builder: (_, __) => const JournalScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                  path: '/prayer', builder: (_, __) => const PrayersScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                  path: '/profile', builder: (_, __) => const ProfileScreen()),
+            ],
+          ),
         ],
       ),
     ],

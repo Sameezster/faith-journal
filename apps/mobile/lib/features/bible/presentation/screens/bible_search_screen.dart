@@ -114,24 +114,27 @@ class _Results extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(FjSpacing.xxl),
-          child: Text('Search failed.\n$e',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: FjColors.gray500)),
+          child: Text(
+            'Search failed.\n$e',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: FjColors.gray500),
+          ),
         ),
       ),
       data: (hits) => hits.isEmpty
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(FjSpacing.xxl),
-                child: Text('No matches.',
-                    style: TextStyle(color: FjColors.gray500)),
+                child: Text(
+                  'No matches.',
+                  style: TextStyle(color: FjColors.gray500),
+                ),
               ),
             )
           : ListView.separated(
               padding: const EdgeInsets.all(FjSpacing.gutter),
               itemCount: hits.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: FjSpacing.sm),
+              separatorBuilder: (_, __) => const SizedBox(height: FjSpacing.sm),
               itemBuilder: (_, i) => _Hit(hit: hits[i], query: query),
             ),
     );

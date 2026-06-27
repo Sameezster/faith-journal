@@ -1,4 +1,5 @@
 /// Typed models that mirror the FastAPI /bible/* response shapes.
+library;
 
 class Translation {
   const Translation({
@@ -44,8 +45,7 @@ class Book {
   final List<int> chapterNumbers;
 
   /// The first chapter that exists, or 1 if the field is missing (older API).
-  int get firstChapter =>
-      chapterNumbers.isNotEmpty ? chapterNumbers.first : 1;
+  int get firstChapter => chapterNumbers.isNotEmpty ? chapterNumbers.first : 1;
 
   /// All chapter numbers a client can navigate to. Prefers the explicit
   /// `chapterNumbers` list (handles partial seed data); falls back to

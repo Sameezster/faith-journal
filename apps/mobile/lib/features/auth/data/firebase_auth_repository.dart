@@ -19,8 +19,7 @@ class FirebaseAuthRepository implements AuthRepository {
   final UserRepository _users;
 
   @override
-  Stream<AppUser?> watchAuthState() =>
-      _auth.authStateChanges().map(_toAppUser);
+  Stream<AppUser?> watchAuthState() => _auth.authStateChanges().map(_toAppUser);
 
   @override
   Future<AppUser> signInWithEmail(String email, String password) async {
@@ -35,7 +34,10 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> registerWithEmail(
-      String name, String email, String password) async {
+    String name,
+    String email,
+    String password,
+  ) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,

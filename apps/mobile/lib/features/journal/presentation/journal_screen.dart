@@ -32,8 +32,10 @@ class JournalScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('My Journal',
-                  style: Theme.of(context).textTheme.displayLarge),
+              Text(
+                'My Journal',
+                style: Theme.of(context).textTheme.displayLarge,
+              ),
               const SizedBox(height: FjSpacing.lg),
               Expanded(
                 child: async.when(
@@ -42,9 +44,11 @@ class JournalScreen extends ConsumerWidget {
                   error: (e, _) => Center(
                     child: Padding(
                       padding: const EdgeInsets.all(FjSpacing.lg),
-                      child: Text('Could not load entries.\n$e',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: FjColors.gray500)),
+                      child: Text(
+                        'Could not load entries.\n$e',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: FjColors.gray500),
+                      ),
                     ),
                   ),
                   data: (entries) => entries.isEmpty
@@ -103,12 +107,14 @@ class _EntryCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: entry.categories
-                      .map((c) => Chip(
-                            label: Text(c, style: const TextStyle(fontSize: 12)),
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                          ))
+                      .map(
+                        (c) => Chip(
+                          label: Text(c, style: const TextStyle(fontSize: 12)),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      )
                       .toList(),
                 ),
               ],
@@ -121,8 +127,18 @@ class _EntryCard extends StatelessWidget {
 
   static String _formatDate(DateTime d) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
     final m = d.minute.toString().padLeft(2, '0');
@@ -142,8 +158,11 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.menu_book_outlined,
-                size: 64, color: FjColors.gray300),
+            const Icon(
+              Icons.menu_book_outlined,
+              size: 64,
+              color: FjColors.gray300,
+            ),
             const SizedBox(height: FjSpacing.lg),
             Text(
               'Start your first reflection',

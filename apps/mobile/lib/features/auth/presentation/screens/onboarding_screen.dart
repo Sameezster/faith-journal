@@ -17,8 +17,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = [
     (title: 'Read the Bible', body: 'Read the Word in KJV, NIV and Tamil.'),
-    (title: 'Save & Reflect', body: 'Save meaningful verses and write your reflections.'),
-    (title: 'Track Your Prayers', body: 'Follow each prayer from request to answered.'),
+    (
+      title: 'Save & Reflect',
+      body: 'Save meaningful verses and write your reflections.'
+    ),
+    (
+      title: 'Track Your Prayers',
+      body: 'Follow each prayer from request to answered.'
+    ),
   ];
 
   @override
@@ -40,13 +46,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(_pages[i].title,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.displayLarge),
+                      Text(
+                        _pages[i].title,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.displayLarge,
+                      ),
                       const SizedBox(height: FjSpacing.lg),
-                      Text(_pages[i].body,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: FjColors.gray500)),
+                      Text(
+                        _pages[i].body,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: FjColors.gray500),
+                      ),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -59,14 +69,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                      onPressed: () => context.go('/welcome'),
-                      child: const Text('Skip', style: TextStyle(color: FjColors.gray500))),
+                    onPressed: () => context.go('/welcome'),
+                    child: const Text('Skip',
+                        style: TextStyle(color: FjColors.gray500)),
+                  ),
                   ElevatedButton(
                     onPressed: () => isLast
                         ? context.go('/welcome')
                         : _controller.nextPage(
-                            duration: const Duration(milliseconds: 280), curve: Curves.easeOut),
-                    style: ElevatedButton.styleFrom(minimumSize: const Size(140, 52)),
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOut,
+                          ),
+                    style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(140, 52)),
                     child: Text(isLast ? 'Get Started' : 'Next'),
                   ),
                 ],

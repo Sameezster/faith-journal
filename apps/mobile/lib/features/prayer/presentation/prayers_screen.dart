@@ -11,11 +11,16 @@ class PrayersScreen extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(FjSpacing.gutter),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Prayers', style: Theme.of(context).textTheme.displayLarge),
-            const SizedBox(height: FjSpacing.lg),
-            const Expanded(child: Center(child: Text('TODO: build per design (see docs §17)'))),
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Prayers', style: Theme.of(context).textTheme.displayLarge),
+              const SizedBox(height: FjSpacing.lg),
+              const Expanded(
+                  child: Center(
+                      child: Text('TODO: build per design (see docs §17)'))),
+            ],
+          ),
         ),
       ),
     );

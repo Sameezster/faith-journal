@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 /// sage (positive secondary), neutral grays.
 abstract class FjColors {
   static const navy900 = Color(0xFF16314E); // display headings, active nav
-  static const navy700 = Color(0xFF1F3D5C); // secondary headings, icons on cream
-  static const gold500 = Color(0xFFC8962F); // primary buttons, active chips/tabs, FAB
+  static const navy700 =
+      Color(0xFF1F3D5C); // secondary headings, icons on cream
+  static const gold500 =
+      Color(0xFFC8962F); // primary buttons, active chips/tabs, FAB
   static const gold300 = Color(0xFFE4C77D); // pressed/hover, subtle accents
-  static const cream50 = Color(0xFFF4F0E6); // app background / onboarding canvas
+  static const cream50 =
+      Color(0xFFF4F0E6); // app background / onboarding canvas
   static const surface0 = Color(0xFFFFFFFF); // cards, sheets, inputs
   static const sage500 = Color(0xFF8A9A7B); // success / positive secondary text
   static const gray500 = Color(0xFF8C8C8C); // body / secondary text

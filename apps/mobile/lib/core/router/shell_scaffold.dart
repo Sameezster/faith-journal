@@ -24,17 +24,20 @@ class ShellScaffold extends StatelessWidget {
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           backgroundColor: FjColors.surface0,
-          indicatorColor: FjColors.gold300.withOpacity(0.35),
-          labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-                fontSize: 11,
-                color: s.contains(WidgetState.selected)
-                    ? FjColors.navy900
-                    : FjColors.gray500,
-              )),
+          indicatorColor: FjColors.gold300.withValues(alpha: 0.35),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (s) => TextStyle(
+              fontSize: 11,
+              color: s.contains(WidgetState.selected)
+                  ? FjColors.navy900
+                  : FjColors.gray500,
+            ),
+          ),
         ),
         child: NavigationBar(
           selectedIndex: shell.currentIndex,
-          onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          onDestinationSelected: (i) =>
+              shell.goBranch(i, initialLocation: i == shell.currentIndex),
           destinations: [
             for (final it in _items)
               NavigationDestination(icon: Icon(it.icon), label: it.label),

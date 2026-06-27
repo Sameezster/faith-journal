@@ -84,9 +84,13 @@ class BibleBrowserScreen extends ConsumerWidget {
                   data: (list) => TabBarView(
                     children: [
                       _BookList(
-                          books: list.oldTestament, translation: translation),
+                        books: list.oldTestament,
+                        translation: translation,
+                      ),
                       _BookList(
-                          books: list.newTestament, translation: translation),
+                        books: list.newTestament,
+                        translation: translation,
+                      ),
                     ],
                   ),
                 ),
@@ -190,8 +194,10 @@ class _BookList extends StatelessWidget {
         return Card(
           margin: EdgeInsets.zero,
           child: ListTile(
-            title: Text(b.name,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(
+              b.name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Text(
               '${b.chapterCount} chapter${b.chapterCount == 1 ? '' : 's'}',
               style: const TextStyle(color: FjColors.gray500, fontSize: 12),
@@ -220,9 +226,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: FjColors.gray500)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: FjColors.gray500),
+            ),
             const SizedBox(height: FjSpacing.md),
             OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
           ],

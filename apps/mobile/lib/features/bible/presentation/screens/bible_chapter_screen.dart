@@ -161,8 +161,7 @@ class BibleChapterScreen extends ConsumerWidget {
                 child: GridView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.all(FjSpacing.gutter),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 6,
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
@@ -182,24 +181,18 @@ class BibleChapterScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(FjRadius.chip),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: current
-                              ? FjColors.gold500
-                              : FjColors.surface0,
+                          color: current ? FjColors.gold500 : FjColors.surface0,
                           border: Border.all(
-                            color: current
-                                ? FjColors.gold500
-                                : FjColors.gray300,
+                            color:
+                                current ? FjColors.gold500 : FjColors.gray300,
                           ),
-                          borderRadius:
-                              BorderRadius.circular(FjRadius.chip),
+                          borderRadius: BorderRadius.circular(FjRadius.chip),
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           '$n',
                           style: TextStyle(
-                            color: current
-                                ? Colors.white
-                                : FjColors.navy900,
+                            color: current ? Colors.white : FjColors.navy900,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -334,12 +327,17 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline,
-                color: FjColors.gray500, size: 48),
+            const Icon(
+              Icons.error_outline,
+              color: FjColors.gray500,
+              size: 48,
+            ),
             const SizedBox(height: FjSpacing.md),
-            Text('Could not load this chapter.\n$error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: FjColors.gray500)),
+            Text(
+              'Could not load this chapter.\n$error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: FjColors.gray500),
+            ),
             const SizedBox(height: FjSpacing.md),
             OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
           ],

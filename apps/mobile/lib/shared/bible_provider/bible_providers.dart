@@ -33,9 +33,7 @@ Future<List<SearchHit>> bibleSearch(
   required String query,
   String? translation,
 }) =>
-    ref
-        .watch(bibleRepositoryProvider)
-        .search(query, translation: translation);
+    ref.watch(bibleRepositoryProvider).search(query, translation: translation);
 
 /// The translation the user is currently browsing. Defaults to KJV.
 /// Persistence to Firestore (`users/{uid}.preferredTranslation`) is a TODO.
