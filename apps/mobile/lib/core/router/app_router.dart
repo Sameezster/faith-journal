@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../features/auth/presentation/screens/splash_screen.dart';
-import '../../features/auth/presentation/screens/onboarding_screen.dart';
-import '../../features/auth/presentation/screens/welcome_screen.dart';
+import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/reset_password_screen.dart';
-import '../../features/home/presentation/home_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/bible/presentation/screens/bible_browser_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/prayer/presentation/prayers_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -19,13 +20,42 @@ part 'app_router.g.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 
+const _publicRoutes = <String>{
+  '/splash',
+  '/onboarding',
+  '/welcome',
+  '/login',
+  '/register',
+  '/reset-password',
+};
+
 /// GoRouter with a StatefulShellRoute for the 5-tab bottom nav
 /// (Home · Bible · Journal · Prayer · Profile). Auth/onboarding live outside the shell.
+///
+/// Redirect logic:
+///   - Unauthenticated user on a protected route -> /welcome
+///   - Authenticated user on any auth route (except /splash) -> /home
 @riverpod
 GoRouter router(RouterRef ref) {
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(authStateProvider, (_, __) => refresh.value++);
+  ref.onDispose(refresh.dispose);
+
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/splash',
+    refreshListenable: refresh,
+    redirect: (context, state) {
+      final authAsync = ref.read(authStateProvider);
+      if (authAsync.isLoading) return null; // wait for first auth event
+      final user = authAsync.value;
+      final loc = state.uri.path;
+      final isPublic = _publicRoutes.contains(loc);
+
+      if (user == null && !isPublic) return '/welcome';
+      if (user != null && isPublic && loc != '/splash') return '/home';
+      return null;
+    },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
@@ -54,6 +84,5 @@ GoRouter router(RouterRef ref) {
         ],
       ),
     ],
-    // TODO: redirect based on authStateProvider (signed-in -> /home, else -> /welcome).
   );
 }

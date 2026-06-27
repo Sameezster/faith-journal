@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../providers/auth_providers.dart';
 
-/// Screen 1 — branded splash with logo, tagline, and a 3-dot page indicator.
-/// Routes to onboarding/welcome (or /home if a session is restored).
-class SplashScreen extends StatefulWidget {
+/// Branded splash. Briefly shows the logo, then routes:
+///   - authenticated user -> /home
+///   - first-time / signed-out user -> /onboarding
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
+
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1600), () {
-      if (mounted) context.go('/onboarding');
-    });
+    Future.delayed(const Duration(milliseconds: 1200), _decideRoute);
+  }
+
+  void _decideRoute() {
+    if (!mounted) return;
+    final user = ref.read(authStateProvider).value;
+    context.go(user == null ? '/onboarding' : '/home');
   }
 
   @override
@@ -30,11 +38,18 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             const Icon(Icons.menu_book, size: 72, color: FjColors.navy900),
             const SizedBox(height: FjSpacing.lg),
-            Text('Faith Journal',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 30)),
+            Text(
+              'Faith Journal',
+              style: Theme.of(context)
+                  .textTheme
+                  .displayLarge
+                  ?.copyWith(fontSize: 30),
+            ),
             const SizedBox(height: FjSpacing.sm),
-            const Text('Remember what God has spoken',
-                style: TextStyle(color: FjColors.gray500)),
+            const Text(
+              'Remember what God has spoken',
+              style: TextStyle(color: FjColors.gray500),
+            ),
           ],
         ),
       ),
