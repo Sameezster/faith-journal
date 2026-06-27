@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from fastapi import Depends, Header
+from fastapi import Header
 
 from app.application.usecases.bible_usecases import (
     GetChapterUseCase, ListBooksUseCase, ListTranslationsUseCase, SearchVersesUseCase,
 )
 from app.application.usecases.categorize_text import CategorizeTextUseCase
-from app.core.config import Settings, get_settings
+from app.core.config import get_settings
 from app.infrastructure.ai.factory import CategorizationService
 from app.infrastructure.bible.local_bundled_provider import LocalBundledProvider
 from app.infrastructure.firebase.token_verifier import FirebaseTokenVerifier

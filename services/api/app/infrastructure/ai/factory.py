@@ -5,7 +5,6 @@ import asyncio
 import logging
 
 from app.core.config import Settings
-from app.domain.entities import Suggestion
 from app.infrastructure.ai.gemini_provider import GeminiProvider
 from app.infrastructure.ai.keyword_provider import KeywordRuleProvider
 from app.infrastructure.ai.openai_provider import OpenAIProvider

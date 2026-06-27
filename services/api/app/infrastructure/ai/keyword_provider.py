@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 
 from app.domain.entities import Suggestion
-from app.infrastructure.ai.taxonomy import FAMILY_KEYWORDS, TAXONOMY, label_for
+from app.infrastructure.ai.taxonomy import FAMILY_KEYWORDS, TAXONOMY
 
 _WORD_RE = re.compile(r"[a-z]+")
 
