@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allows cleartext HTTP only for localhost and private LAN addresses (the
+  developer's FastAPI service during local dev). Production hosts must use
+  HTTPS — cleartext is denied by default for everything else.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">192.168.31.155</domain>
+    </domain-config>
+</network-security-config>

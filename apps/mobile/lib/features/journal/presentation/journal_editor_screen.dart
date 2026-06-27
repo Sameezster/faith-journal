@@ -1,8 +1,10 @@
+import 'package:fj_ui/fj_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/ai/ai_service.dart';
 import '../../../shared/journal/journal_providers.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 
@@ -14,13 +16,22 @@ class JournalEditorScreen extends ConsumerStatefulWidget {
   final String? entryId;
 
   @override
-  ConsumerState<JournalEditorScreen> createState() => _JournalEditorScreenState();
+  ConsumerState<JournalEditorScreen> createState() =>
+      _JournalEditorScreenState();
 }
 
 class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
   final _controller = TextEditingController();
   bool _busy = false;
   bool _loaded = false;
+  bool _suggesting = false;
+
+  /// Suggestions surfaced by the AI. Each `(slug, label)` pair.
+  final List<({String slug, String label})> _suggestions = [];
+
+  /// Slugs the user has currently picked (subset of `_suggestions` + any
+  /// pre-existing categories on the entry).
+  final Set<String> _selected = <String>{};
 
   bool get _isEditing => widget.entryId != null;
 
@@ -41,7 +52,15 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
         .read(journalRepositoryProvider)
         .getEntry(user.uid, widget.entryId!);
     if (!mounted) return;
-    if (entry != null) _controller.text = entry.text;
+    if (entry != null) {
+      _controller.text = entry.text;
+      // Pre-existing categories surface as already-selected chips so the user
+      // can deselect or re-suggest without losing them.
+      for (final slug in entry.categories) {
+        _suggestions.add((slug: slug, label: _humanize(slug)));
+        _selected.add(slug);
+      }
+    }
     setState(() => _loaded = true);
   }
 
@@ -49,6 +68,43 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _suggest() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Write something first.')),
+      );
+      return;
+    }
+    setState(() => _suggesting = true);
+    try {
+      final result = await ref.read(aiServiceProvider).categorize(text);
+      if (!mounted) return;
+      setState(() {
+        // Merge: keep any already-selected chips, append new suggestions
+        // that aren't already in the list.
+        for (final s in result) {
+          final already =
+              _suggestions.any((existing) => existing.slug == s.slug);
+          if (!already) {
+            _suggestions.add((slug: s.slug, label: s.label));
+          }
+        }
+        // Auto-select new suggestions so the common case is one tap.
+        for (final s in result) {
+          _selected.add(s.slug);
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not get suggestions: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _suggesting = false);
+    }
   }
 
   Future<void> _save() async {
@@ -66,10 +122,20 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     setState(() => _busy = true);
     try {
       final repo = ref.read(journalRepositoryProvider);
+      final categories = _selected.toList();
       if (_isEditing) {
-        await repo.updateEntry(user.uid, widget.entryId!, text: text);
+        await repo.updateEntry(
+          user.uid,
+          widget.entryId!,
+          text: text,
+          categories: categories,
+        );
       } else {
-        await repo.createEntry(user.uid, text: text);
+        await repo.createEntry(
+          user.uid,
+          text: text,
+          categories: categories,
+        );
       }
       if (!mounted) return;
       context.go('/journal');
@@ -121,6 +187,11 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     }
   }
 
+  /// Turn a slug like `peace` into a nicer label like `Peace` (used for chips
+  /// loaded from an existing entry where we don't have the label).
+  static String _humanize(String slug) =>
+      slug.isEmpty ? slug : slug[0].toUpperCase() + slug.substring(1);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,26 +226,133 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
       body: SafeArea(
         child: !_loaded
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: FjSpacing.gutter,
-                  vertical: FjSpacing.lg,
-                ),
-                child: TextField(
-                  controller: _controller,
-                  autofocus: !_isEditing,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  keyboardType: TextInputType.multiline,
-                  style: const TextStyle(fontSize: 16, height: 1.5),
-                  decoration: const InputDecoration(
-                    hintText: "What's on your heart today?",
-                    border: InputBorder.none,
-                    filled: false,
+            : Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: FjSpacing.gutter,
+                        vertical: FjSpacing.lg,
+                      ),
+                      child: TextField(
+                        controller: _controller,
+                        autofocus: !_isEditing,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        keyboardType: TextInputType.multiline,
+                        style: const TextStyle(fontSize: 16, height: 1.5),
+                        decoration: const InputDecoration(
+                          hintText: "What's on your heart today?",
+                          border: InputBorder.none,
+                          filled: false,
+                        ),
+                      ),
+                    ),
                   ),
+                  _CategorySection(
+                    suggestions: _suggestions,
+                    selected: _selected,
+                    suggesting: _suggesting,
+                    onSuggest: _suggest,
+                    onToggle: (slug) {
+                      setState(() {
+                        if (_selected.contains(slug)) {
+                          _selected.remove(slug);
+                        } else {
+                          _selected.add(slug);
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Bottom strip showing AI-suggested category chips + a Suggest button.
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({
+    required this.suggestions,
+    required this.selected,
+    required this.suggesting,
+    required this.onSuggest,
+    required this.onToggle,
+  });
+
+  final List<({String slug, String label})> suggestions;
+  final Set<String> selected;
+  final bool suggesting;
+  final VoidCallback onSuggest;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: FjColors.surface0,
+        border: Border(top: BorderSide(color: FjColors.gray300)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        FjSpacing.gutter,
+        FjSpacing.md,
+        FjSpacing.gutter,
+        FjSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Categories',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: FjColors.navy900,
                 ),
               ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: suggesting ? null : onSuggest,
+                icon: suggesting
+                    ? const SizedBox(
+                        height: 14,
+                        width: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 18),
+                label: Text(
+                  suggestions.isEmpty ? 'Suggest with AI' : 'Re-suggest',
+                ),
+              ),
+            ],
+          ),
+          if (suggestions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: FjSpacing.sm),
+              child: Text(
+                'Tap Suggest to let AI pick categories from your text.',
+                style: TextStyle(color: FjColors.gray500, fontSize: 13),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: suggestions
+                  .map(
+                    (s) => CategoryChip(
+                      label: s.label,
+                      selected: selected.contains(s.slug),
+                      onTap: () => onToggle(s.slug),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
       ),
     );
   }

@@ -15,6 +15,8 @@ class CategoryChip extends StatelessWidget {
   final VoidCallback onTap;
 
   static const _gold = Color(0xFFC8962F);
+  static const _grayBorder = Color(0xFFD9D6CC);
+  static const _grayText = Color(0xFF8C8C8C);
 
   @override
   Widget build(BuildContext context) {
@@ -23,14 +25,17 @@ class CategoryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? _gold.withOpacity(0.15) : Colors.transparent,
-          border: Border.all(color: selected ? _gold : const Color(0xFFD9D6CC)),
+          color: selected ? _gold.withValues(alpha: 0.15) : Colors.transparent,
+          border: Border.all(color: selected ? _gold : _grayBorder),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(label,
-            style: TextStyle(
-                color: selected ? _gold : const Color(0xFF8C8C8C),
-                fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? _gold : _grayText,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

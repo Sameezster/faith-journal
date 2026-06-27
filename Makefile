@@ -13,7 +13,7 @@ $(API_PY):
 api.venv: $(API_PY)
 
 api.dev: $(API_PY)
-	cd services/api && ../../$(API_VENV)/bin/uvicorn app.main:app --reload --port 8080
+	cd services/api && ../../$(API_VENV)/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 
 api.test: $(API_PY)
 	cd services/api && AI_PROVIDER=keyword AUTH_REQUIRED=false ../../$(API_PY) -m pytest -q
