@@ -1,0 +1,3 @@
+# Reserved for on-device Bible cache (Hive/Drift) — see bible_repository.dart TODO.
+# This .gitkeep ensures the directory is tracked so the Flutter asset declaration
+# in pubspec.yaml resolves on a fresh clone.
