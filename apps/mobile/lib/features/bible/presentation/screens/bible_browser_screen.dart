@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../shared/bible_provider/bible_book_icons.dart';
 import '../../../../shared/bible_provider/bible_models.dart';
 import '../../../../shared/bible_provider/bible_providers.dart';
 
-/// Browse-the-Bible screen: translation picker + OT/NT tabs + book list.
+/// Bible browser: title + translation chip, search bar, OT/NT tabs, book list.
 class BibleBrowserScreen extends ConsumerWidget {
   const BibleBrowserScreen({super.key});
 
@@ -27,7 +28,7 @@ class BibleBrowserScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   FjSpacing.gutter,
-                  FjSpacing.gutter,
+                  FjSpacing.lg,
                   FjSpacing.gutter,
                   0,
                 ),
@@ -39,35 +40,35 @@ class BibleBrowserScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.displayLarge,
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Search',
-                      icon: const Icon(Icons.search),
-                      onPressed: () => context.go('/bible/search'),
+                    translations.when(
+                      loading: () => const _TranslationChipSkeleton(),
+                      error: (_, __) => _TranslationChip(
+                        code: translation,
+                        onTap: null,
+                      ),
+                      data: (list) => _TranslationChip(
+                        code: translation,
+                        onTap: () => _pickTranslation(context, ref, list),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: FjSpacing.md),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: FjSpacing.gutter),
-                child: translations.when(
-                  loading: () => const _TranslationPickerSkeleton(),
-                  error: (e, _) =>
-                      const _ErrorPill(message: 'Could not load translations'),
-                  data: (list) => _TranslationPicker(
-                    translations: list,
-                    selected: translation,
-                    onChanged: (code) => ref
-                        .read(selectedTranslationProvider.notifier)
-                        .set(code),
-                  ),
-                ),
+              const SizedBox(height: FjSpacing.lg),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: FjSpacing.gutter),
+                child: _SearchBar(),
               ),
-              const SizedBox(height: FjSpacing.md),
+              const SizedBox(height: FjSpacing.lg),
               const TabBar(
-                labelColor: FjColors.navy900,
+                labelColor: FjColors.gold500,
+                unselectedLabelColor: FjColors.navy700,
                 indicatorColor: FjColors.gold500,
+                indicatorWeight: 3,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
                 tabs: [
                   Tab(text: 'Old Testament'),
                   Tab(text: 'New Testament'),
@@ -101,64 +102,164 @@ class BibleBrowserScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _pickTranslation(
+    BuildContext context,
+    WidgetRef ref,
+    List<Translation> list,
+  ) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: FjColors.surface0,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(FjRadius.cardLg)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                FjSpacing.gutter,
+                FjSpacing.lg,
+                FjSpacing.gutter,
+                FjSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Choose translation',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: FjColors.navy900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            for (final t in list)
+              ListTile(
+                title: Text(t.code),
+                subtitle: Text(t.name),
+                trailing: ref.read(selectedTranslationProvider) == t.code
+                    ? const Icon(Icons.check, color: FjColors.gold500)
+                    : null,
+                onTap: () => Navigator.pop(ctx, t.code),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      ref.read(selectedTranslationProvider.notifier).set(picked);
+    }
+  }
 }
 
-class _TranslationPicker extends StatelessWidget {
-  const _TranslationPicker({
-    required this.translations,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<Translation> translations;
-  final String selected;
-  final ValueChanged<String> onChanged;
+class _TranslationChip extends StatelessWidget {
+  const _TranslationChip({required this.code, required this.onTap});
+  final String code;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: FjSpacing.md),
-      decoration: BoxDecoration(
-        color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(FjRadius.input),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selected,
-          isExpanded: true,
-          items: translations
-              .map(
-                (t) => DropdownMenuItem(
-                  value: t.code,
-                  child: Text('${t.code} · ${t.name}'),
+    return Material(
+      color: FjColors.surface0,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: FjColors.gold500.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                code,
+                style: const TextStyle(
+                  color: FjColors.navy900,
+                  fontWeight: FontWeight.w700,
                 ),
-              )
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down,
+                  size: 18, color: FjColors.gold500),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _TranslationPickerSkeleton extends StatelessWidget {
-  const _TranslationPickerSkeleton();
+class _TranslationChipSkeleton extends StatelessWidget {
+  const _TranslationChipSkeleton();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
+      width: 76,
+      height: 36,
       decoration: BoxDecoration(
         color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(FjRadius.input),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FjColors.gray300),
       ),
-      child: const Center(
-        child: SizedBox(
-          height: 18,
-          width: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
+      alignment: Alignment.center,
+      child: const SizedBox(
+        height: 14,
+        width: 14,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: FjColors.surface0,
+      borderRadius: BorderRadius.circular(FjRadius.input),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(FjRadius.input),
+        onTap: () => context.go('/bible/search'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: FjSpacing.lg,
+            vertical: 14,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(FjRadius.input),
+            boxShadow: [
+              BoxShadow(
+                color: FjColors.navy900.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.search, color: FjColors.gray500),
+              SizedBox(width: FjSpacing.md),
+              Expanded(
+                child: Text(
+                  'Search books or verses',
+                  style: TextStyle(color: FjColors.gray500, fontSize: 14),
+                ),
+              ),
+              Icon(Icons.tune, color: FjColors.gold500),
+            ],
+          ),
         ),
       ),
     );
@@ -178,7 +279,7 @@ class _BookList extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(FjSpacing.xxl),
           child: Text(
-            'No books in this section yet.\nRun `make api.seed` to load full Bible data.',
+            'No books in this section yet.',
             textAlign: TextAlign.center,
             style: TextStyle(color: FjColors.gray500),
           ),
@@ -186,29 +287,74 @@ class _BookList extends StatelessWidget {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(FjSpacing.gutter),
+      padding: const EdgeInsets.fromLTRB(
+        FjSpacing.gutter,
+        FjSpacing.md,
+        FjSpacing.gutter,
+        FjSpacing.xxxl,
+      ),
       itemCount: books.length,
       separatorBuilder: (_, __) => const SizedBox(height: FjSpacing.sm),
-      itemBuilder: (_, i) {
-        final b = books[i];
-        return Card(
-          margin: EdgeInsets.zero,
-          child: ListTile(
-            title: Text(
-              b.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              '${b.chapterCount} chapter${b.chapterCount == 1 ? '' : 's'}',
-              style: const TextStyle(color: FjColors.gray500, fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go(
-              '/bible/$translation/${b.osisCode}/${b.firstChapter}',
-            ),
+      itemBuilder: (_, i) =>
+          _BookCard(book: books[i], translation: translation),
+    );
+  }
+}
+
+class _BookCard extends StatelessWidget {
+  const _BookCard({required this.book, required this.translation});
+
+  final Book book;
+  final String translation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: FjColors.surface0,
+      borderRadius: BorderRadius.circular(FjRadius.card),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(FjRadius.card),
+        onTap: () => context.go(
+          '/bible/$translation/${book.osisCode}/${book.firstChapter}',
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(FjRadius.card),
+            boxShadow: [
+              BoxShadow(
+                color: FjColors.navy900.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        );
-      },
+          padding: const EdgeInsets.symmetric(
+            horizontal: FjSpacing.md,
+            vertical: FjSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                bibleBookIcon(book.osisCode),
+                color: FjColors.gold500,
+                size: 26,
+              ),
+              const SizedBox(width: FjSpacing.md),
+              Expanded(
+                child: Text(
+                  book.name,
+                  style: const TextStyle(
+                    color: FjColors.navy900,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: FjColors.gray500),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -236,23 +382,6 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ErrorPill extends StatelessWidget {
-  const _ErrorPill({required this.message});
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(FjSpacing.md),
-      decoration: BoxDecoration(
-        color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(FjRadius.input),
-      ),
-      child: Text(message, style: const TextStyle(color: FjColors.gray500)),
     );
   }
 }

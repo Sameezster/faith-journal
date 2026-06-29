@@ -5,15 +5,19 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../../shared/ai/ai_service.dart';
+import '../../../shared/bible_provider/bible_providers.dart';
 import '../../../shared/journal/journal_providers.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 
 /// Full-screen editor for creating or editing a journal entry.
 /// Pass [entryId] to edit; null = create.
+/// Pass [pinnedVerseRef] (format: `TRANSLATION:OSIS:CHAPTER:VERSE`) to
+/// pre-attach a Bible verse to a new reflection.
 class JournalEditorScreen extends ConsumerStatefulWidget {
-  const JournalEditorScreen({super.key, this.entryId});
+  const JournalEditorScreen({super.key, this.entryId, this.pinnedVerseRef});
 
   final String? entryId;
+  final String? pinnedVerseRef;
 
   @override
   ConsumerState<JournalEditorScreen> createState() =>
@@ -25,6 +29,10 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
   bool _busy = false;
   bool _loaded = false;
   bool _suggesting = false;
+
+  /// Cached verse info when [JournalEditorScreen.pinnedVerseRef] is set.
+  /// Looks like `(reference: 'John 3:16', text: 'For God so loved…')`.
+  ({String reference, String text})? _pinnedVerse;
 
   /// Suggestions surfaced by the AI. Each `(slug, label)` pair.
   final List<({String slug, String label})> _suggestions = [];
@@ -42,6 +50,37 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
       _loadExisting();
     } else {
       _loaded = true;
+      if (widget.pinnedVerseRef != null) _loadPinnedVerse();
+    }
+  }
+
+  /// Fetch the chapter containing the pinned verse so we can show its
+  /// text in the editor and snapshot it on save.
+  Future<void> _loadPinnedVerse() async {
+    final parts = widget.pinnedVerseRef!.split(':');
+    if (parts.length != 4) return;
+    final translation = parts[0];
+    final book = parts[1];
+    final chapter = int.tryParse(parts[2]);
+    final verse = int.tryParse(parts[3]);
+    if (chapter == null || verse == null) return;
+    try {
+      final c = await ref
+          .read(bibleRepositoryProvider)
+          .getChapter(translation, book, chapter);
+      final v = c.verses.firstWhere(
+        (x) => x.number == verse,
+        orElse: () => c.verses.first,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pinnedVerse = (
+          reference: '${c.bookName} ${c.chapter}:${v.number}',
+          text: v.text,
+        );
+      });
+    } catch (_) {
+      // Silent — we just won't show the pinned card if fetch fails.
     }
   }
 
@@ -135,6 +174,9 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
           user.uid,
           text: text,
           categories: categories,
+          verseRef: widget.pinnedVerseRef,
+          verseReference: _pinnedVerse?.reference,
+          verseText: _pinnedVerse?.text,
         );
       }
       if (!mounted) return;
@@ -228,6 +270,11 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
+                  if (_pinnedVerse != null)
+                    _PinnedVerseCard(
+                      reference: _pinnedVerse!.reference,
+                      text: _pinnedVerse!.text,
+                    ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -242,8 +289,10 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
                         textAlignVertical: TextAlignVertical.top,
                         keyboardType: TextInputType.multiline,
                         style: const TextStyle(fontSize: 16, height: 1.5),
-                        decoration: const InputDecoration(
-                          hintText: "What's on your heart today?",
+                        decoration: InputDecoration(
+                          hintText: _pinnedVerse != null
+                              ? 'What did this verse stir in you?'
+                              : "What's on your heart today?",
                           border: InputBorder.none,
                           filled: false,
                         ),
@@ -267,6 +316,71 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
                   ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+/// Compact card shown above the text field when a verse is pinned.
+class _PinnedVerseCard extends StatelessWidget {
+  const _PinnedVerseCard({required this.reference, required this.text});
+
+  final String reference;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        FjSpacing.gutter,
+        FjSpacing.md,
+        FjSpacing.gutter,
+        0,
+      ),
+      padding: const EdgeInsets.all(FjSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFBF4E8), Color(0xFFF1E2C0)],
+        ),
+        borderRadius: BorderRadius.circular(FjRadius.card),
+        border: Border.all(color: FjColors.gold500.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.bookmark,
+                size: 16,
+                color: FjColors.gold500,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                reference,
+                style: const TextStyle(
+                  fontFamily: 'PlayfairDisplay',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: FjColors.navy900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'PlayfairDisplay',
+              fontSize: 14,
+              height: 1.4,
+              fontStyle: FontStyle.italic,
+              color: FjColors.navy700,
+            ),
+          ),
+        ],
       ),
     );
   }

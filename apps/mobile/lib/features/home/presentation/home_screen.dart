@@ -6,6 +6,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../shared/bible_provider/bible_providers.dart';
 import '../../../shared/journal/journal_entry.dart';
 import '../../../shared/journal/journal_providers.dart';
+import '../../auth/domain/auth_repository.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
 
@@ -242,14 +243,20 @@ class _VerseOfDayCard extends ConsumerWidget {
                     (x) => x.number == pick.verse,
                     orElse: () => c.verses.first,
                   );
+                  final reference = '${c.bookName} ${c.chapter}:${v.number}';
+                  final verseRef =
+                      'KJV:${pick.osis}:${pick.chapter}:${v.number}';
                   return _VerseBody(
-                    reference: '${c.bookName} ${c.chapter}:${v.number}',
+                    reference: reference,
                     text: v.text,
-                    onSave: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Verse saved — coming soon.')),
+                    onSave: () => _saveVerseToJournal(
+                      context,
+                      ref,
+                      verseRef: verseRef,
+                      reference: reference,
+                      text: v.text,
                     ),
-                    onReflect: () => context.go('/journal/new'),
+                    onReflect: () => context.go('/journal/new?ref=$verseRef'),
                   );
                 },
               ),
@@ -257,6 +264,35 @@ class _VerseOfDayCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Pins a verse to the user's journal as a `type=verse` entry.
+Future<void> _saveVerseToJournal(
+  BuildContext context,
+  WidgetRef ref, {
+  required String verseRef,
+  required String reference,
+  required String text,
+}) async {
+  final AppUser? user = ref.read(authStateProvider).value;
+  if (user == null) return;
+  try {
+    await ref.read(journalRepositoryProvider).createVerseEntry(
+          user.uid,
+          verseRef: verseRef,
+          verseReference: reference,
+          verseText: text,
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved $reference to your journal.')),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not save: $e')),
     );
   }
 }

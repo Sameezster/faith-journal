@@ -12,6 +12,7 @@ import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/bible/presentation/screens/bible_browser_screen.dart';
 import '../../features/bible/presentation/screens/bible_chapter_screen.dart';
 import '../../features/bible/presentation/screens/bible_search_screen.dart';
+import '../../features/bible/presentation/screens/saved_verses_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
@@ -71,9 +72,12 @@ GoRouter router(RouterRef ref) {
           path: '/reset-password',
           builder: (_, __) => const ResetPasswordScreen()),
       // Journal editor (full-screen, outside the bottom-nav shell).
+      // `?ref=KJV:Book:Chapter:Verse` pre-pins a Bible verse to a new entry.
       GoRoute(
         path: '/journal/new',
-        builder: (_, __) => const JournalEditorScreen(),
+        builder: (_, state) => JournalEditorScreen(
+          pinnedVerseRef: state.uri.queryParameters['ref'],
+        ),
       ),
       GoRoute(
         path: '/journal/:id',
@@ -94,6 +98,10 @@ GoRouter router(RouterRef ref) {
       GoRoute(
         path: '/bible/search',
         builder: (_, __) => const BibleSearchScreen(),
+      ),
+      GoRoute(
+        path: '/saved-verses',
+        builder: (_, __) => const SavedVersesScreen(),
       ),
       GoRoute(
         path: '/bible/:translation/:book/:chapter',

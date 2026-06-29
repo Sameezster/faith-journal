@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/tokens.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
@@ -78,6 +79,16 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: FjSpacing.xxl),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.bookmark, color: FjColors.gold500),
+                  title: const Text('Saved Verses'),
+                  subtitle: const Text('All your bookmarked Scripture'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/saved-verses'),
+                ),
+              ),
+              const SizedBox(height: FjSpacing.md),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.menu_book, color: FjColors.navy700),
