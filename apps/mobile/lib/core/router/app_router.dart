@@ -15,6 +15,7 @@ import '../../features/bible/presentation/screens/bible_search_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
+import '../../features/prayer/presentation/prayer_editor_screen.dart';
 import '../../features/prayer/presentation/prayers_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import 'shell_scaffold.dart';
@@ -78,6 +79,16 @@ GoRouter router(RouterRef ref) {
         path: '/journal/:id',
         builder: (_, state) =>
             JournalEditorScreen(entryId: state.pathParameters['id']),
+      ),
+      // Prayer editor (full-screen, outside the bottom-nav shell).
+      GoRoute(
+        path: '/prayer/new',
+        builder: (_, __) => const PrayerEditorScreen(),
+      ),
+      GoRoute(
+        path: '/prayer/:id',
+        builder: (_, state) =>
+            PrayerEditorScreen(requestId: state.pathParameters['id']),
       ),
       // Bible search + chapter reader (full-screen).
       GoRoute(
