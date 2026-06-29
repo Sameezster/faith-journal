@@ -17,9 +17,11 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
 import '../../features/journal/presentation/voice_reflection_screen.dart';
+import '../../features/prayer/presentation/prayer_detail_screen.dart';
 import '../../features/prayer/presentation/prayer_editor_screen.dart';
 import '../../features/prayer/presentation/prayers_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/reminders/presentation/reminders_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import 'shell_scaffold.dart';
 
@@ -92,15 +94,24 @@ GoRouter router(RouterRef ref) {
         builder: (_, state) =>
             JournalEditorScreen(entryId: state.pathParameters['id']),
       ),
-      // Prayer editor (full-screen, outside the bottom-nav shell).
+      // Prayer screens (full-screen, outside the bottom-nav shell).
       GoRoute(
         path: '/prayer/new',
         builder: (_, __) => const PrayerEditorScreen(),
       ),
       GoRoute(
-        path: '/prayer/:id',
+        path: '/prayer/:id/edit',
         builder: (_, state) =>
             PrayerEditorScreen(requestId: state.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/prayer/:id',
+        builder: (_, state) =>
+            PrayerDetailScreen(requestId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/reminders',
+        builder: (_, __) => const RemindersScreen(),
       ),
       // Bible search + chapter reader (full-screen).
       GoRoute(

@@ -499,7 +499,7 @@ class _CardMenuButton extends ConsumerWidget {
 
     switch (value) {
       case 'edit':
-        context.go('/prayer/${prayer.id}');
+        context.go('/prayer/${prayer.id}/edit');
         return;
       case 'active':
         await repo.updateRequest(user.uid, prayer.id,

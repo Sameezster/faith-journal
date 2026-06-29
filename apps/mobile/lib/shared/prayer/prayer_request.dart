@@ -10,9 +10,12 @@ extension PrayerStatusX on PrayerStatus {
         PrayerStatus.answered => 'answered',
       };
 
+  /// Label shown in the UI. `waiting` displays as "In Progress" to match
+  /// the design — the underlying status slug is still `waiting` so legacy
+  /// docs continue to work.
   String get label => switch (this) {
         PrayerStatus.active => 'Active',
-        PrayerStatus.waiting => 'Waiting',
+        PrayerStatus.waiting => 'In Progress',
         PrayerStatus.answered => 'Answered',
       };
 
@@ -36,6 +39,11 @@ class PrayerRequest {
     required this.status,
     this.category,
     this.date,
+    this.testimony,
+    this.verseRef,
+    this.verseReference,
+    this.voiceUrl,
+    this.voiceDurationSeconds,
     this.createdAt,
     this.updatedAt,
     this.answeredAt,
@@ -47,6 +55,21 @@ class PrayerRequest {
   final PrayerStatus status;
   final String? category;
   final DateTime? date;
+
+  /// What the user believes God is doing or has promised — shown as a
+  /// "Testimony" section on the detail screen.
+  final String? testimony;
+
+  /// Canonical pinned verse, e.g. `KJV:Isa:53:5`.
+  final String? verseRef;
+
+  /// Human-readable verse reference for display, e.g. `Isaiah 53:5`.
+  final String? verseReference;
+
+  /// Firebase Storage URL of the attached voice note (if any).
+  final String? voiceUrl;
+  final int? voiceDurationSeconds;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? answeredAt;
@@ -67,6 +90,11 @@ class PrayerRequest {
       status: PrayerStatusX.fromSlug(d['status'] as String?),
       category: d['category'] as String?,
       date: (d['date'] as Timestamp?)?.toDate(),
+      testimony: d['testimony'] as String?,
+      verseRef: d['verseRef'] as String?,
+      verseReference: d['verseReference'] as String?,
+      voiceUrl: d['voiceUrl'] as String?,
+      voiceDurationSeconds: (d['voiceDurationSeconds'] as num?)?.toInt(),
       createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (d['updatedAt'] as Timestamp?)?.toDate(),
       answeredAt: (d['answeredAt'] as Timestamp?)?.toDate(),
