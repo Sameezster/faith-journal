@@ -1,18 +1,58 @@
-import 'package:fj_ui/fj_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/tokens.dart';
-import '../../../shared/ai/ai_service.dart';
 import '../../../shared/bible_provider/bible_providers.dart';
 import '../../../shared/journal/journal_providers.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 
-/// Full-screen editor for creating or editing a journal entry.
-/// Pass [entryId] to edit; null = create.
-/// Pass [pinnedVerseRef] (format: `TRANSLATION:OSIS:CHAPTER:VERSE`) to
-/// pre-attach a Bible verse to a new reflection.
+/// Available tag chips shown below the reflection text field. We can later
+/// swap these for AI-driven suggestions; static for now so the editor works
+/// offline.
+const List<({String slug, String label, IconData icon, Color color})>
+    _reflectionTags = [
+  (
+    slug: 'faith',
+    label: 'Faith',
+    icon: Icons.eco_outlined,
+    color: FjColors.sage500,
+  ),
+  (
+    slug: 'hope',
+    label: 'Hope',
+    icon: Icons.anchor,
+    color: FjColors.gold500,
+  ),
+  (
+    slug: 'peace',
+    label: 'Peace',
+    icon: Icons.spa_outlined,
+    color: FjColors.sage500,
+  ),
+  (
+    slug: 'strength',
+    label: 'Strength',
+    icon: Icons.shield_outlined,
+    color: FjColors.sage500,
+  ),
+  (
+    slug: 'love',
+    label: 'Love',
+    icon: Icons.favorite_outline,
+    color: FjColors.gold500,
+  ),
+  (
+    slug: 'wisdom',
+    label: 'Wisdom',
+    icon: Icons.lightbulb_outline,
+    color: FjColors.gold500,
+  ),
+];
+
+const int _maxChars = 1000;
+
 class JournalEditorScreen extends ConsumerStatefulWidget {
   const JournalEditorScreen({super.key, this.entryId, this.pinnedVerseRef});
 
@@ -28,24 +68,15 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
   final _controller = TextEditingController();
   bool _busy = false;
   bool _loaded = false;
-  bool _suggesting = false;
-
-  /// Cached verse info when [JournalEditorScreen.pinnedVerseRef] is set.
-  /// Looks like `(reference: 'John 3:16', text: 'For God so loved…')`.
+  final Set<String> _selectedTags = <String>{};
   ({String reference, String text})? _pinnedVerse;
-
-  /// Suggestions surfaced by the AI. Each `(slug, label)` pair.
-  final List<({String slug, String label})> _suggestions = [];
-
-  /// Slugs the user has currently picked (subset of `_suggestions` + any
-  /// pre-existing categories on the entry).
-  final Set<String> _selected = <String>{};
 
   bool get _isEditing => widget.entryId != null;
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(() => setState(() {}));
     if (_isEditing) {
       _loadExisting();
     } else {
@@ -54,8 +85,6 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     }
   }
 
-  /// Fetch the chapter containing the pinned verse so we can show its
-  /// text in the editor and snapshot it on save.
   Future<void> _loadPinnedVerse() async {
     final parts = widget.pinnedVerseRef!.split(':');
     if (parts.length != 4) return;
@@ -80,7 +109,7 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
         );
       });
     } catch (_) {
-      // Silent — we just won't show the pinned card if fetch fails.
+      // Silent — pinned card just won't render.
     }
   }
 
@@ -93,11 +122,12 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     if (!mounted) return;
     if (entry != null) {
       _controller.text = entry.text;
-      // Pre-existing categories surface as already-selected chips so the user
-      // can deselect or re-suggest without losing them.
-      for (final slug in entry.categories) {
-        _suggestions.add((slug: slug, label: _humanize(slug)));
-        _selected.add(slug);
+      _selectedTags.addAll(entry.categories);
+      if (entry.verseReference != null && entry.verseText != null) {
+        _pinnedVerse = (
+          reference: entry.verseReference!,
+          text: entry.verseText!,
+        );
       }
     }
     setState(() => _loaded = true);
@@ -109,49 +139,12 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     super.dispose();
   }
 
-  Future<void> _suggest() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write something first.')),
-      );
-      return;
-    }
-    setState(() => _suggesting = true);
-    try {
-      final result = await ref.read(aiServiceProvider).categorize(text);
-      if (!mounted) return;
-      setState(() {
-        // Merge: keep any already-selected chips, append new suggestions
-        // that aren't already in the list.
-        for (final s in result) {
-          final already =
-              _suggestions.any((existing) => existing.slug == s.slug);
-          if (!already) {
-            _suggestions.add((slug: s.slug, label: s.label));
-          }
-        }
-        // Auto-select new suggestions so the common case is one tap.
-        for (final s in result) {
-          _selected.add(s.slug);
-        }
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get suggestions: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _suggesting = false);
-    }
-  }
-
   Future<void> _save() async {
     if (_busy) return;
     final text = _controller.text.trim();
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Write something first.')),
+        const SnackBar(content: Text('Write your reflection first.')),
       );
       return;
     }
@@ -161,7 +154,7 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     setState(() => _busy = true);
     try {
       final repo = ref.read(journalRepositoryProvider);
-      final categories = _selected.toList();
+      final categories = _selectedTags.toList();
       if (_isEditing) {
         await repo.updateEntry(
           user.uid,
@@ -229,90 +222,109 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
     }
   }
 
-  /// Turn a slug like `peace` into a nicer label like `Peace` (used for chips
-  /// loaded from an existing entry where we don't have the label).
-  static String _humanize(String slug) =>
-      slug.isEmpty ? slug : slug[0].toUpperCase() + slug.substring(1);
-
   @override
   Widget build(BuildContext context) {
+    final title = _pinnedVerse != null || widget.pinnedVerseRef != null
+        ? 'Add Reflection'
+        : _isEditing
+            ? 'Edit Reflection'
+            : 'New Reflection';
+
     return Scaffold(
       backgroundColor: FjColors.cream50,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.arrow_back, color: FjColors.gold500),
           onPressed: () => context.go('/journal'),
         ),
-        title: Text(_isEditing ? 'Edit reflection' : 'New reflection'),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontFamily: 'PlayfairDisplay',
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
+            color: FjColors.navy900,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           if (_isEditing)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline, color: FjColors.gold500),
               onPressed: _busy ? null : _confirmDelete,
             ),
-          TextButton(
-            onPressed: _busy || !_loaded ? null : _save,
-            child: _busy
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
+        top: false,
         child: !_loaded
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [
-                  if (_pinnedVerse != null)
-                    _PinnedVerseCard(
-                      reference: _pinnedVerse!.reference,
-                      text: _pinnedVerse!.text,
-                    ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: FjSpacing.gutter,
-                        vertical: FjSpacing.lg,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        FjSpacing.gutter,
+                        FjSpacing.sm,
+                        FjSpacing.gutter,
+                        FjSpacing.lg,
                       ),
-                      child: TextField(
-                        controller: _controller,
-                        autofocus: !_isEditing,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        keyboardType: TextInputType.multiline,
-                        style: const TextStyle(fontSize: 16, height: 1.5),
-                        decoration: InputDecoration(
-                          hintText: _pinnedVerse != null
-                              ? 'What did this verse stir in you?'
-                              : "What's on your heart today?",
-                          border: InputBorder.none,
-                          filled: false,
+                      children: [
+                        if (_pinnedVerse != null) ...[
+                          _PinnedVerseCard(
+                            reference: _pinnedVerse!.reference,
+                            text: _pinnedVerse!.text,
+                          ),
+                          const SizedBox(height: FjSpacing.xxl),
+                        ],
+                        const Text(
+                          'Your Reflection',
+                          style: TextStyle(
+                            color: FjColors.navy900,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: FjSpacing.md),
+                        _ReflectionField(
+                          controller: _controller,
+                          maxChars: _maxChars,
+                        ),
+                        const SizedBox(height: FjSpacing.xxl),
+                        const Text(
+                          'Add Tags (optional)',
+                          style: TextStyle(
+                            color: FjColors.navy900,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: FjSpacing.md),
+                        _TagsRow(
+                          selected: _selectedTags,
+                          onToggle: (slug) {
+                            setState(() {
+                              if (_selectedTags.contains(slug)) {
+                                _selectedTags.remove(slug);
+                              } else {
+                                _selectedTags.add(slug);
+                              }
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  _CategorySection(
-                    suggestions: _suggestions,
-                    selected: _selected,
-                    suggesting: _suggesting,
-                    onSuggest: _suggest,
-                    onToggle: (slug) {
-                      setState(() {
-                        if (_selected.contains(slug)) {
-                          _selected.remove(slug);
-                        } else {
-                          _selected.add(slug);
-                        }
-                      });
-                    },
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      FjSpacing.gutter,
+                      0,
+                      FjSpacing.gutter,
+                      FjSpacing.md,
+                    ),
+                    child: _SaveButton(busy: _busy, onTap: _save),
                   ),
                 ],
               ),
@@ -321,7 +333,7 @@ class _JournalEditorScreenState extends ConsumerState<JournalEditorScreen> {
   }
 }
 
-/// Compact card shown above the text field when a verse is pinned.
+/// Pinned verse card shown at the top of the reflection editor.
 class _PinnedVerseCard extends StatelessWidget {
   const _PinnedVerseCard({required this.reference, required this.text});
 
@@ -331,53 +343,56 @@ class _PinnedVerseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        FjSpacing.gutter,
-        FjSpacing.md,
-        FjSpacing.gutter,
-        0,
-      ),
       padding: const EdgeInsets.all(FjSpacing.lg),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFBF4E8), Color(0xFFF1E2C0)],
-        ),
+        color: FjColors.surface0,
         borderRadius: BorderRadius.circular(FjRadius.card),
-        border: Border.all(color: FjColors.gold500.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: FjColors.navy900.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.bookmark,
-                size: 16,
-                color: FjColors.gold500,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                reference,
-                style: const TextStyle(
-                  fontFamily: 'PlayfairDisplay',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: FjColors.navy900,
-                ),
-              ),
-            ],
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: FjColors.gold500.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child:
+                const Icon(Icons.menu_book, color: FjColors.gold500, size: 22),
           ),
-          const SizedBox(height: 8),
-          Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'PlayfairDisplay',
-              fontSize: 14,
-              height: 1.4,
-              fontStyle: FontStyle.italic,
-              color: FjColors.navy700,
+          const SizedBox(width: FjSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reference,
+                  style: const TextStyle(
+                    fontFamily: 'PlayfairDisplay',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: FjColors.navy900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: FjColors.navy900,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -386,88 +401,190 @@ class _PinnedVerseCard extends StatelessWidget {
   }
 }
 
-/// Bottom strip showing AI-suggested category chips + a Suggest button.
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({
-    required this.suggestions,
-    required this.selected,
-    required this.suggesting,
-    required this.onSuggest,
-    required this.onToggle,
-  });
+class _ReflectionField extends StatelessWidget {
+  const _ReflectionField({required this.controller, required this.maxChars});
 
-  final List<({String slug, String label})> suggestions;
-  final Set<String> selected;
-  final bool suggesting;
-  final VoidCallback onSuggest;
-  final ValueChanged<String> onToggle;
+  final TextEditingController controller;
+  final int maxChars;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: FjColors.surface0,
-        border: Border(top: BorderSide(color: FjColors.gray300)),
+      decoration: BoxDecoration(
+        color: FjColors.surface0.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(FjRadius.input),
+        border: Border.all(color: FjColors.gray300),
       ),
-      padding: const EdgeInsets.fromLTRB(
-        FjSpacing.gutter,
-        FjSpacing.md,
-        FjSpacing.gutter,
-        FjSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Categories',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: FjColors.navy900,
-                ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          FjSpacing.lg,
+          FjSpacing.md,
+          FjSpacing.lg,
+          FjSpacing.sm,
+        ),
+        child: Column(
+          children: [
+            TextField(
+              controller: controller,
+              maxLines: 8,
+              minLines: 8,
+              maxLength: maxChars,
+              maxLengthEnforcement:
+                  MaxLengthEnforcement.truncateAfterCompositionEnds,
+              style: const TextStyle(
+                color: FjColors.navy900,
+                fontSize: 15,
+                height: 1.55,
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: suggesting ? null : onSuggest,
-                icon: suggesting
-                    ? const SizedBox(
-                        height: 14,
-                        width: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome, size: 18),
-                label: Text(
-                  suggestions.isEmpty ? 'Suggest with AI' : 'Re-suggest',
-                ),
+              decoration: const InputDecoration(
+                hintText: 'Write what God spoke to you…',
+                hintStyle: TextStyle(color: FjColors.gray500),
+                border: InputBorder.none,
+                filled: false,
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
               ),
-            ],
-          ),
-          if (suggestions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: FjSpacing.sm),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
               child: Text(
-                'Tap Suggest to let AI pick categories from your text.',
-                style: TextStyle(color: FjColors.gray500, fontSize: 13),
+                '${controller.text.characters.length}/$maxChars',
+                style: const TextStyle(
+                  color: FjColors.gray500,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TagsRow extends StatelessWidget {
+  const _TagsRow({required this.selected, required this.onToggle});
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _reflectionTags.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final t = _reflectionTags[i];
+          final isSelected = selected.contains(t.slug);
+          return _TagChip(
+            label: t.label,
+            icon: t.icon,
+            color: t.color,
+            selected: isSelected,
+            onTap: () => onToggle(t.slug),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: 0.18)
+              : color.withValues(alpha: 0.08),
+          border: Border.all(
+            color: selected ? color : color.withValues(alpha: 0.25),
+          ),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({required this.busy, required this.onTap});
+
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: busy ? null : onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: FjColors.gold500,
+        foregroundColor: Colors.white,
+        minimumSize: const Size.fromHeight(56),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(FjRadius.button),
+        ),
+      ),
+      child: busy
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: suggestions
-                  .map(
-                    (s) => CategoryChip(
-                      label: s.label,
-                      selected: selected.contains(s.slug),
-                      onTap: () => onToggle(s.slug),
-                    ),
-                  )
-                  .toList(),
+          : const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wb_sunny_outlined, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Save Reflection',
+                  style: TextStyle(
+                    fontFamily: 'PlayfairDisplay',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                  ),
+                ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }

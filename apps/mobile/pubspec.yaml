@@ -35,6 +35,7 @@ dependencies:
   # Media & notifications
   record: ^6.0.0
   just_audio: ^0.9.38
+  path_provider: ^2.1.4
   flutter_local_notifications: ^17.1.0
   # UI
   fj_core:

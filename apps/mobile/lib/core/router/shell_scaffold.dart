@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/tokens.dart';
 
-/// Bottom navigation shell: Home · Bible · Journal · Prayer · Profile.
+/// Bottom navigation shell: Home · Bible · Journal · Search · Prayer · Profile.
 /// Active tab uses navy icon/label with a gold indicator (per the design).
 class ShellScaffold extends StatelessWidget {
   const ShellScaffold({required this.shell, super.key});
@@ -13,6 +13,7 @@ class ShellScaffold extends StatelessWidget {
     (icon: Icons.home_outlined, label: 'Home'),
     (icon: Icons.menu_book_outlined, label: 'Bible'),
     (icon: Icons.bookmark_border, label: 'Journal'),
+    (icon: Icons.search, label: 'Search'),
     (icon: Icons.volunteer_activism_outlined, label: 'Prayer'),
     (icon: Icons.person_outline, label: 'Profile'),
   ];

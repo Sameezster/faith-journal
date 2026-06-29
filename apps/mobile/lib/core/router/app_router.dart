@@ -16,9 +16,11 @@ import '../../features/bible/presentation/screens/saved_verses_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/journal/presentation/journal_editor_screen.dart';
 import '../../features/journal/presentation/journal_screen.dart';
+import '../../features/journal/presentation/voice_reflection_screen.dart';
 import '../../features/prayer/presentation/prayer_editor_screen.dart';
 import '../../features/prayer/presentation/prayers_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/search/presentation/search_screen.dart';
 import 'shell_scaffold.dart';
 
 part 'app_router.g.dart';
@@ -80,6 +82,12 @@ GoRouter router(RouterRef ref) {
         ),
       ),
       GoRoute(
+        path: '/journal/voice',
+        builder: (_, state) => VoiceReflectionScreen(
+          pinnedVerseRef: state.uri.queryParameters['ref'],
+        ),
+      ),
+      GoRoute(
         path: '/journal/:id',
         builder: (_, state) =>
             JournalEditorScreen(entryId: state.pathParameters['id']),
@@ -130,6 +138,12 @@ GoRouter router(RouterRef ref) {
             routes: [
               GoRoute(
                   path: '/journal', builder: (_, __) => const JournalScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                  path: '/search', builder: (_, __) => const SearchScreen()),
             ],
           ),
           StatefulShellBranch(
