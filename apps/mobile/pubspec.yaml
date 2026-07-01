@@ -37,6 +37,8 @@ dependencies:
   just_audio: ^0.9.38
   path_provider: ^2.1.4
   flutter_local_notifications: ^17.1.0
+  # Platform detection (emulator vs real device, to pick the right API host)
+  device_info_plus: ^11.2.0
   # UI
   fj_core:
     path: ../../packages/fj_core

@@ -185,7 +185,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: FjColors.gold500),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/profile');
+            }
+          },
         ),
       ),
       body: SafeArea(

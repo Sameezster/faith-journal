@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../shared/journal/journal_providers.dart';
+import '../../../shared/prayer/prayer_providers.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
+import '../data/sample_data_seeder.dart';
 import 'providers/profile_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -52,7 +55,7 @@ class ProfileScreen extends ConsumerWidget {
                   iconColor: FjColors.sage500,
                   title: 'Bible Version',
                   subtitle: _bibleVersionLabel(translation),
-                  onTap: () => context.go('/saved-verses'),
+                  onTap: () => context.push('/saved-verses'),
                 ),
                 const _Separator(),
                 _SettingsRow(
@@ -60,7 +63,7 @@ class ProfileScreen extends ConsumerWidget {
                   iconColor: FjColors.sage500,
                   title: 'Notifications',
                   subtitle: 'Manage your reminders',
-                  onTap: () => context.go('/reminders'),
+                  onTap: () => context.push('/reminders'),
                 ),
                 const _Separator(),
                 _SettingsRow(
@@ -106,6 +109,14 @@ class ProfileScreen extends ConsumerWidget {
                     applicationLegalese: '© 2026 SelinyxTech. Built with care.',
                   ),
                 ),
+                const _Separator(),
+                _SettingsRow(
+                  icon: Icons.dataset_outlined,
+                  iconColor: FjColors.gold500,
+                  title: 'Load sample data',
+                  subtitle: '5 prayers + 5 reflections (dev only)',
+                  onTap: () => _loadSamples(context, ref),
+                ),
               ],
             ),
             const SizedBox(height: FjSpacing.lg),
@@ -123,6 +134,54 @@ class ProfileScreen extends ConsumerWidget {
         'NIV' => 'NIV (New International Version)',
         _ => code,
       };
+
+  Future<void> _loadSamples(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(authStateProvider).value;
+    if (user == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Load sample data?'),
+        content: const Text(
+          '5 sample prayers and 5 sample reflections will be added to your '
+          'journal. Existing entries are not affected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Load'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Loading sample data…')),
+    );
+    final seeder = SampleDataSeeder(
+      ref.read(prayerRepositoryProvider),
+      ref.read(journalRepositoryProvider),
+    );
+    try {
+      final result = await seeder.seed(user.uid);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added ${result.prayers} prayers and ${result.entries} reflections.',
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not load samples: $e')),
+      );
+    }
+  }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(

@@ -1,6 +1,10 @@
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
@@ -12,13 +16,47 @@ Future<void> main() async {
   await Firebase.initializeApp(
       // options: DefaultFirebaseOptions.currentPlatform,
       );
+  final config = await _resolveDevConfig();
   runApp(
     ProviderScope(
       overrides: [
-        // Select the flavor here (dev/staging/prod) via --dart-define or entrypoints.
-        appConfigProvider.overrideWithValue(AppConfig.dev),
+        appConfigProvider.overrideWithValue(config),
       ],
       child: const FaithJournalApp(),
     ),
   );
+}
+
+/// Picks the right dev API host at startup so the app "just works" on every
+/// target without manual URL swapping:
+///   - Android **emulator**       → `10.0.2.2`     (emulator's alias for the host machine)
+///   - Android **physical phone** → `AppConfig.devLanIp` (your Mac's WiFi IP)
+///   - iOS **simulator**          → `127.0.0.1`
+///   - iOS **physical iPhone**    → `AppConfig.devLanIp`
+///   - macOS desktop / web        → `127.0.0.1`
+///
+/// On any failure (e.g., device_info_plus throws), falls back to the LAN IP.
+Future<AppConfig> _resolveDevConfig() async {
+  if (kIsWeb) {
+    return AppConfig.dev(host: '127.0.0.1');
+  }
+  try {
+    final info = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      final android = await info.androidInfo;
+      final host = android.isPhysicalDevice ? AppConfig.devLanIp : '10.0.2.2';
+      return AppConfig.dev(host: host);
+    }
+    if (Platform.isIOS) {
+      final ios = await info.iosInfo;
+      final host = ios.isPhysicalDevice ? AppConfig.devLanIp : '127.0.0.1';
+      return AppConfig.dev(host: host);
+    }
+    if (Platform.isMacOS || Platform.isLinux || Platform.isWindows) {
+      return AppConfig.dev(host: '127.0.0.1');
+    }
+  } catch (_) {
+    // Fall through to fallback.
+  }
+  return AppConfig.devFallback;
 }
