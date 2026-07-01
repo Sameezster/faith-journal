@@ -1,0 +1,32 @@
+# Normalize line endings across macOS, Linux, and Windows so Python and shell
+# scripts don't drift to CRLF on Windows checkouts (which breaks shebangs and
+# some Python tooling).
+* text=auto eol=lf
+
+# Explicitly LF for source files
+*.py text eol=lf
+*.dart text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.sh text eol=lf
+Makefile text eol=lf
+
+# Windows-native files stay CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Binary — never touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.pdf binary
+*.svg binary
