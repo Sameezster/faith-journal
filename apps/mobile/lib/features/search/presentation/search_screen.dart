@@ -84,6 +84,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: FjColors.cream50,
+      // Search is a full-screen route (not a bottom-nav tab), so it needs its
+      // own back affordance.
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        leading: const BackButton(),
+        title: const Text('Search'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(

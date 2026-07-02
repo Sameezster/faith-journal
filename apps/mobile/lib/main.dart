@@ -4,7 +4,9 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
@@ -13,6 +15,15 @@ import 'core/network/dio_client.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // All Google Fonts variants we use are bundled in assets/google_fonts/ —
+  // never fetch over the network (offline-safe, no font flash).
+  GoogleFonts.config.allowRuntimeFetching = false;
+  // Faith Journal is a portrait-first reading/journaling app — lock orientation
+  // so screens stay clean and never render sideways.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   await Firebase.initializeApp(
       // options: DefaultFirebaseOptions.currentPlatform,
       );

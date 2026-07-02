@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/tokens.dart';
+import '../../../core/constants/app_assets.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_icons.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/sparkle_divider.dart';
 import '../../../shared/bible_provider/bible_providers.dart';
 import '../../../shared/journal/journal_entry.dart';
 import '../../../shared/journal/journal_providers.dart';
@@ -44,6 +48,8 @@ const List<({String osis, int chapter, int verse})> _verseOfDay = [
   (osis: 'Rom', chapter: 10, verse: 9),
 ];
 
+/// Home dashboard — greeting, Verse of the Day, quick actions and recent
+/// reflections. Designed to feel calm and spacious.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -60,51 +66,23 @@ class HomeScreen extends ConsumerWidget {
     final photoUrl = profile?.photoUrl ?? auth?.photoUrl;
 
     return Scaffold(
-      backgroundColor: FjColors.cream50,
       body: SafeArea(
+        bottom: false,
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(journalEntriesProvider);
             ref.invalidate(translationsProvider);
           },
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              FjSpacing.gutter,
-              FjSpacing.lg,
-              FjSpacing.gutter,
-              FjSpacing.xxxl,
-            ),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
             children: [
-              _Greeting(name: displayName, now: now, photoUrl: photoUrl),
-              const SizedBox(height: FjSpacing.xxl),
-              _VerseOfDayCard(now: now),
-              const SizedBox(height: FjSpacing.xxl),
-              const _QuickActionGrid(),
-              const SizedBox(height: FjSpacing.xxxl),
-              _RecentReflectionsHeader(),
-              const SizedBox(height: FjSpacing.md),
-              entries.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(FjSpacing.lg),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (e, _) => Text(
-                  'Could not load entries.\n$e',
-                  style: const TextStyle(color: FjColors.gray500),
-                ),
-                data: (list) => list.isEmpty
-                    ? const _EmptyRecent()
-                    : Column(
-                        children: list
-                            .take(3)
-                            .toList()
-                            .asMap()
-                            .entries
-                            .map((e) =>
-                                _RecentTile(entry: e.value, index: e.key))
-                            .toList(),
-                      ),
-              ),
+              _Header(name: displayName, now: now, photoUrl: photoUrl),
+              const SizedBox(height: 26),
+              _VerseOfTheDayCard(now: now),
+              const SizedBox(height: 30),
+              const _QuickActionsGrid(),
+              const SizedBox(height: 36),
+              _RecentReflections(entries: entries),
             ],
           ),
         ),
@@ -122,8 +100,11 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _Greeting extends StatelessWidget {
-  const _Greeting({
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+class _Header extends StatelessWidget {
+  const _Header({
     required this.name,
     required this.now,
     required this.photoUrl,
@@ -142,7 +123,6 @@ class _Greeting extends StatelessWidget {
             : 'Good evening';
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
@@ -150,43 +130,54 @@ class _Greeting extends StatelessWidget {
             children: [
               Text(
                 '$greeting, $name',
-                style: const TextStyle(
-                  fontFamily: 'PlayfairDisplay',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 30,
-                  height: 1.15,
-                  color: FjColors.navy900,
-                ),
+                style: AppTextStyles.h1.copyWith(fontSize: 28, height: 1.15),
               ),
               const SizedBox(height: 6),
-              const Row(
+              Row(
                 children: [
                   Text(
                     'Walk with God today',
-                    style: TextStyle(color: FjColors.gray500, fontSize: 14),
+                    style: AppTextStyles.body
+                        .copyWith(color: AppColors.warmGray, fontSize: 15),
                   ),
-                  SizedBox(width: 6),
-                  Icon(Icons.auto_awesome, size: 14, color: FjColors.gold500),
+                  const SizedBox(width: 8),
+                  const SparkleShape(size: 13, color: AppColors.gold),
                 ],
               ),
             ],
           ),
         ),
-        CircleAvatar(
-          radius: 26,
-          backgroundColor: FjColors.gold300,
-          backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
-          child: photoUrl == null
-              ? const Icon(Icons.person, color: Colors.white, size: 28)
-              : null,
+        const SizedBox(width: 14),
+        Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.navy.withValues(alpha: 0.12),
+                blurRadius: 10,
+              ),
+            ],
+            image: DecorationImage(
+              image: photoUrl != null
+                  ? NetworkImage(photoUrl!)
+                  : const AssetImage(AppAssets.profileAvatar) as ImageProvider,
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
-class _VerseOfDayCard extends ConsumerWidget {
-  const _VerseOfDayCard({required this.now});
+// ---------------------------------------------------------------------------
+// Verse of the Day
+// ---------------------------------------------------------------------------
+class _VerseOfTheDayCard extends ConsumerWidget {
+  const _VerseOfTheDayCard({required this.now});
   final DateTime now;
 
   static int _dayOfYear(DateTime d) => d.difference(DateTime(d.year)).inDays;
@@ -198,72 +189,196 @@ class _VerseOfDayCard extends ConsumerWidget {
       bibleChapterProvider('KJV', pick.osis, pick.chapter),
     );
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(FjRadius.cardLg),
+    return GestureDetector(
       onTap: () => context.go('/bible/KJV/${pick.osis}/${pick.chapter}'),
       child: Container(
+        padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFBF4E8), Color(0xFFF1E2C0)],
-          ),
-          borderRadius: BorderRadius.circular(FjRadius.cardLg),
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(26),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFC8962F).withValues(alpha: 0.10),
-              blurRadius: 24,
-              offset: const Offset(0, 6),
+              color: AppColors.gold.withValues(alpha: 0.12),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: FjSpacing.lg,
-          vertical: FjSpacing.xxl,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const _VerseIllustration(),
-            const SizedBox(width: FjSpacing.lg),
-            Expanded(
-              child: chapter.when(
-                loading: () => const SizedBox(
-                  height: 160,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (e, _) => _VerseBody(
-                  reference: '${pick.osis} ${pick.chapter}:${pick.verse}',
-                  text: 'Could not load verse. Pull down to refresh.',
-                  onSave: null,
-                  onReflect: null,
-                ),
-                data: (c) {
-                  final v = c.verses.firstWhere(
-                    (x) => x.number == pick.verse,
-                    orElse: () => c.verses.first,
-                  );
-                  final reference = '${c.bookName} ${c.chapter}:${v.number}';
-                  final verseRef =
-                      'KJV:${pick.osis}:${pick.chapter}:${v.number}';
-                  return _VerseBody(
-                    reference: reference,
-                    text: v.text,
-                    onSave: () => _saveVerseToJournal(
-                      context,
-                      ref,
-                      verseRef: verseRef,
-                      reference: reference,
-                      text: v.text,
-                    ),
-                    onReflect: () => context.go('/journal/new?ref=$verseRef'),
-                  );
-                },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(21),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFBF5E8), Color(0xFFF2E7CC)],
               ),
             ),
-          ],
+            child: SizedBox(
+              height: 240,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Left illustration (~46%), dissolving gently into the card so
+                  // the image and cream read as one seamless surface.
+                  Expanded(
+                    flex: 46,
+                    child: ShaderMask(
+                      shaderCallback: (rect) => const LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [Colors.white, Colors.white, Colors.transparent],
+                        stops: [0, 0.45, 0.98],
+                      ).createShader(rect),
+                      blendMode: BlendMode.dstIn,
+                      child: Image.asset(
+                        AppAssets.homeVerse,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                      ),
+                    ),
+                  ),
+
+                  // Right content.
+                  Expanded(
+                    flex: 54,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(2, 16, 16, 16),
+                      child: chapter.when(
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        error: (e, _) => _VerseBody(
+                          reference:
+                              '${pick.osis} ${pick.chapter}:${pick.verse}',
+                          text: 'Could not load verse. Pull down to refresh.',
+                          onSave: null,
+                          onReflect: null,
+                        ),
+                        data: (c) {
+                          final v = c.verses.firstWhere(
+                            (x) => x.number == pick.verse,
+                            orElse: () => c.verses.first,
+                          );
+                          final reference =
+                              '${c.bookName} ${c.chapter}:${v.number}';
+                          final verseRef =
+                              'KJV:${pick.osis}:${pick.chapter}:${v.number}';
+                          return _VerseBody(
+                            reference: reference,
+                            text: v.text,
+                            onSave: () => _saveVerseToJournal(
+                              context,
+                              ref,
+                              verseRef: verseRef,
+                              reference: reference,
+                              text: v.text,
+                            ),
+                            onReflect: () =>
+                                context.go('/journal/new?ref=$verseRef'),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// The right-hand side of the Verse of the Day card: label, reference,
+/// sparkle divider, the quote, and the Save / Reflect actions.
+class _VerseBody extends StatelessWidget {
+  const _VerseBody({
+    required this.reference,
+    required this.text,
+    required this.onSave,
+    required this.onReflect,
+  });
+
+  final String reference;
+  final String text;
+  final VoidCallback? onSave;
+  final VoidCallback? onReflect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const _LabelRule('Verse of the Day'),
+        const SizedBox(height: 12),
+        Text(
+          reference,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.verseReference.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        const SparkleDivider(lineWidth: 22, sparkleSize: 11),
+        const SizedBox(height: 12),
+
+        // Quote — real verses vary in length, so cap the lines instead of the
+        // mock's fixed two-line FittedBox.
+        SizedBox(
+          width: double.infinity,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                top: -14,
+                child: Text(
+                  '“',
+                  style: AppTextStyles.appTitle.copyWith(
+                    fontSize: 42,
+                    color: AppColors.gold,
+                    height: 1,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.appTitle.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.charcoal,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        const Divider(height: 1, color: Color(0x22000000)),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _VerseAction(icon: AppIcons.save, label: 'Save', onTap: onSave),
+            Container(
+              width: 1,
+              height: 18,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              color: const Color(0x33000000),
+            ),
+            _VerseAction(
+                icon: AppIcons.reflect, label: 'Reflect', onTap: onReflect),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -297,185 +412,68 @@ Future<void> _saveVerseToJournal(
   }
 }
 
-/// Stylized "Bible + cross" illustration built from Flutter primitives.
-/// Drop in a real PNG/SVG at `assets/illustrations/bible.png` and swap this
-/// for an `Image.asset(...)` when you have artwork.
-class _VerseIllustration extends StatelessWidget {
-  const _VerseIllustration();
+/// A small gold label flanked by short rules, e.g. "— Verse of the Day —".
+class _LabelRule extends StatelessWidget {
+  const _LabelRule(this.text);
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 88,
-      height: 140,
-      child: Stack(
-        alignment: Alignment.center,
+    Widget rule() => Container(width: 16, height: 1, color: AppColors.gold);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        rule(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            text,
+            style: AppTextStyles.label.copyWith(
+              color: AppColors.gold,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        rule(),
+      ],
+    );
+  }
+}
+
+class _VerseAction extends StatelessWidget {
+  const _VerseAction({required this.icon, required this.label, this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Soft halo behind the cross
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  const Color(0xFFFFF5D6).withValues(alpha: 0.95),
-                  const Color(0xFFFFF5D6).withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-          const Positioned(
-            top: 0,
-            child: Icon(
-              Icons.add, // serves as a simple cross silhouette
-              size: 32,
-              color: Color(0xFFC8962F),
-            ),
-          ),
-          const Positioned(
-            bottom: 0,
-            child: Icon(
-              Icons.menu_book,
-              size: 60,
-              color: Color(0xFF8C6B2E),
-            ),
-          ),
+          Icon(icon, size: 18, color: AppColors.navy),
+          const SizedBox(width: 7),
+          Text(label,
+              style: AppTextStyles.body
+                  .copyWith(color: AppColors.navy, fontSize: 15)),
         ],
       ),
     );
   }
 }
 
-class _VerseBody extends StatelessWidget {
-  const _VerseBody({
-    required this.reference,
-    required this.text,
-    required this.onSave,
-    required this.onReflect,
-  });
-
-  final String reference;
-  final String text;
-  final VoidCallback? onSave;
-  final VoidCallback? onReflect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _Dash(),
-            SizedBox(width: 8),
-            Text(
-              'Verse of the Day',
-              style: TextStyle(
-                color: FjColors.gold500,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-                letterSpacing: 0.5,
-              ),
-            ),
-            SizedBox(width: 8),
-            _Dash(),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          reference,
-          style: const TextStyle(
-            fontFamily: 'PlayfairDisplay',
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-            color: FjColors.navy900,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _Dash(width: 14),
-            SizedBox(width: 4),
-            Icon(Icons.star, size: 8, color: FjColors.gold500),
-            SizedBox(width: 4),
-            _Dash(width: 14),
-          ],
-        ),
-        const SizedBox(height: FjSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            '"$text"',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'PlayfairDisplay',
-              fontWeight: FontWeight.w600,
-              fontSize: 19,
-              height: 1.35,
-              color: FjColors.navy900,
-            ),
-          ),
-        ),
-        const SizedBox(height: FjSpacing.lg),
-        const Divider(height: 1, color: Color(0x33C8962F)),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: TextButton.icon(
-                onPressed: onSave,
-                icon: const Icon(Icons.bookmark_outline,
-                    size: 18, color: FjColors.navy700),
-                label: const Text(
-                  'Save',
-                  style: TextStyle(
-                    color: FjColors.navy700,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            Container(width: 1, height: 20, color: const Color(0x33C8962F)),
-            Expanded(
-              child: TextButton.icon(
-                onPressed: onReflect,
-                icon: const Icon(Icons.edit_outlined,
-                    size: 18, color: FjColors.navy700),
-                label: const Text(
-                  'Reflect',
-                  style: TextStyle(
-                    color: FjColors.navy700,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Dash extends StatelessWidget {
-  const _Dash({this.width = 24});
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: 1,
-      color: const Color(0x66C8962F),
-    );
-  }
-}
-
-class _QuickActionGrid extends StatelessWidget {
-  const _QuickActionGrid();
+// ---------------------------------------------------------------------------
+// Quick actions (2 x 2)
+// ---------------------------------------------------------------------------
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid();
 
   @override
   Widget build(BuildContext context) {
@@ -485,16 +483,16 @@ class _QuickActionGrid extends StatelessWidget {
           children: [
             Expanded(
               child: _ActionCard(
-                icon: Icons.menu_book_outlined,
+                image: AppAssets.actionBible,
                 title: 'Bible',
                 subtitle: 'Read the Word',
                 onTap: () => context.go('/bible'),
               ),
             ),
-            const SizedBox(width: FjSpacing.md),
+            const SizedBox(width: 14),
             Expanded(
               child: _ActionCard(
-                icon: Icons.book_outlined,
+                image: AppAssets.actionJournal,
                 title: 'Journal',
                 subtitle: 'Write & Reflect',
                 onTap: () => context.go('/journal'),
@@ -502,24 +500,24 @@ class _QuickActionGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: FjSpacing.md),
+        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
               child: _ActionCard(
-                icon: Icons.volunteer_activism_outlined,
+                image: AppAssets.actionPrayer,
                 title: 'Prayers',
                 subtitle: 'Lift your heart',
                 onTap: () => context.go('/prayer'),
               ),
             ),
-            const SizedBox(width: FjSpacing.md),
+            const SizedBox(width: 14),
             Expanded(
               child: _ActionCard(
-                icon: Icons.search,
+                image: AppAssets.actionSearch,
                 title: 'Search',
                 subtitle: 'Find in Scripture',
-                onTap: () => context.go('/bible/search'),
+                onTap: () => context.push('/search'),
               ),
             ),
           ],
@@ -531,265 +529,212 @@ class _QuickActionGrid extends StatelessWidget {
 
 class _ActionCard extends StatelessWidget {
   const _ActionCard({
-    required this.icon,
+    required this.image,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String image;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FjColors.surface0,
-      borderRadius: BorderRadius.circular(FjRadius.card),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(FjRadius.card),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(FjRadius.card),
-            boxShadow: [
-              BoxShadow(
-                color: FjColors.navy900.withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: FjSpacing.lg,
-            vertical: FjSpacing.lg,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: FjColors.gold500.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: FjColors.gold500, size: 24),
-              ),
-              const SizedBox(width: FjSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontFamily: 'PlayfairDisplay',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: FjColors.navy900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navy.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Image.asset(image, width: 42, height: 42),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.h2.copyWith(fontSize: 18)),
+                  const SizedBox(height: 3),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: FjColors.gray500,
-                        fontSize: 12,
-                      ),
+                      style: AppTextStyles.caption.copyWith(fontSize: 12.5),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _RecentReflectionsHeader extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// Recent Reflections
+// ---------------------------------------------------------------------------
+class _RecentReflections extends StatelessWidget {
+  const _RecentReflections({required this.entries});
+
+  final AsyncValue<List<JournalEntry>> entries;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Text(
-            'Recent Reflections',
-            style: TextStyle(
-              fontFamily: 'PlayfairDisplay',
-              fontWeight: FontWeight.w700,
-              fontSize: 22,
-              color: FjColors.navy900,
-            ),
-          ),
-        ),
-        InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => context.go('/journal'),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'View all',
-                  style: TextStyle(
-                    color: FjColors.gold500,
-                    fontWeight: FontWeight.w600,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Recent Reflections',
+                style: AppTextStyles.h2.copyWith(fontSize: 22)),
+            GestureDetector(
+              onTap: () => context.go('/journal'),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Text(
+                    'View all',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                SizedBox(width: 2),
-                Icon(Icons.chevron_right, size: 18, color: FjColors.gold500),
-              ],
+                  const Icon(AppIcons.forward,
+                      size: 18, color: AppColors.gold),
+                ],
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        entries.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
           ),
+          error: (e, _) => Text(
+            'Could not load entries.\n$e',
+            style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
+          ),
+          data: (list) => list.isEmpty
+              ? const _EmptyRecent()
+              : Column(
+                  children: [
+                    for (final (i, entry) in list.take(3).indexed) ...[
+                      if (i > 0) const SizedBox(height: 16),
+                      _ReflectionCard(entry: entry, index: i),
+                    ],
+                  ],
+                ),
         ),
       ],
     );
   }
 }
 
-class _RecentTile extends StatelessWidget {
-  const _RecentTile({required this.entry, required this.index});
+class _ReflectionCard extends StatelessWidget {
+  const _ReflectionCard({required this.entry, required this.index});
+
   final JournalEntry entry;
   final int index;
 
-  /// Four palette presets rotated by index, so each card gets a slightly
-  /// different gradient placeholder. Drop in a real Image.asset later.
-  static const List<List<Color>> _palettes = [
-    [Color(0xFFF8E2C2), Color(0xFFE7C28A)], // sunrise
-    [Color(0xFFE3DBC2), Color(0xFFB9B07E)], // sage / olive
-    [Color(0xFFD9D6CC), Color(0xFFA9A38F)], // stone
-    [Color(0xFFEED8B6), Color(0xFFC8962F)], // gold
+  /// The two design illustrations, rotated by position in the list.
+  static const List<String> _images = [
+    AppAssets.homeReflection1,
+    AppAssets.homeReflection2,
   ];
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palettes[index % _palettes.length];
-    final firstCategory =
-        entry.categories.isNotEmpty ? entry.categories.first : null;
+    final image = _images[index % _images.length];
+    final date = entry.createdAt != null ? _formatDate(entry.createdAt!) : '';
+    final reference = entry.verseReference ??
+        (entry.categories.isNotEmpty ? _humanize(entry.categories.first) : '');
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: FjSpacing.md),
-      child: Material(
-        color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(FjRadius.card),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(FjRadius.card),
-          onTap: () => context.go('/journal/${entry.id}'),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(FjRadius.card),
-              boxShadow: [
-                BoxShadow(
-                  color: FjColors.navy900.withValues(alpha: 0.05),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => context.go('/journal/${entry.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navy.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
             ),
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                _Thumbnail(palette: palette),
-                const SizedBox(width: FjSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child:
+                  Image.asset(image, width: 88, height: 84, fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      _MetaLine(date: entry.createdAt, tag: firstCategory),
-                      const SizedBox(height: 6),
-                      Text(
-                        entry.text,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'PlayfairDisplay',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                          height: 1.35,
-                          color: FjColors.navy900,
+                      Text(date, style: AppTextStyles.caption),
+                      if (reference.isNotEmpty) ...[
+                        Text('  •  ', style: AppTextStyles.caption),
+                        Flexible(
+                          child: Text(
+                            reference,
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.sage),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: FjColors.gold500.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+                  const SizedBox(height: 8),
+                  Text(
+                    entry.text,
+                    style:
+                        AppTextStyles.body.copyWith(fontSize: 14, height: 1.35),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Icon(Icons.arrow_forward,
-                      size: 18, color: FjColors.gold500),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.palette});
-  final List<Color> palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 84,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: palette,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Icon(
-              Icons.wb_sunny_outlined,
-              color: Colors.white.withValues(alpha: 0.7),
-              size: 18,
+            const SizedBox(width: 8),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.gold.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(AppIcons.arrowRight,
+                  size: 18, color: AppColors.gold),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetaLine extends StatelessWidget {
-  const _MetaLine({required this.date, required this.tag});
-  final DateTime? date;
-  final String? tag;
-
-  @override
-  Widget build(BuildContext context) {
-    final parts = <String>[
-      if (date != null) _formatDate(date!),
-      if (tag != null) _humanize(tag!),
-    ];
-    return Text(
-      parts.join(' · '),
-      style: const TextStyle(
-        color: FjColors.gray500,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+          ],
+        ),
       ),
     );
   }
@@ -822,33 +767,33 @@ class _EmptyRecent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(FjSpacing.xxl),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(FjRadius.card),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: FjColors.navy900.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: AppColors.navy.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.edit_outlined, size: 36, color: FjColors.gray300),
-          SizedBox(height: FjSpacing.sm),
+          const Icon(AppIcons.reflect, size: 36, color: AppColors.placeholder),
+          const SizedBox(height: 10),
           Text(
             'No reflections yet.',
-            style: TextStyle(
-              color: FjColors.navy900,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.navy,
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'Tap "Journal" above to write your first.',
-            style: TextStyle(color: FjColors.gray500, fontSize: 13),
+            style: AppTextStyles.caption.copyWith(fontSize: 13),
             textAlign: TextAlign.center,
           ),
         ],

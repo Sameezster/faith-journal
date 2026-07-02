@@ -1,77 +1,79 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// Maps a book's OSIS code to a thematic icon shown next to its name in the
-/// browser. Falls back to a generic open-book icon for codes not in the map.
+/// Maps a book's OSIS code to a thematic Lucide icon shown next to its name
+/// in the browser (per the client design — one consistent thin-line set).
+/// Falls back to a generic open-book icon for codes not in the map.
 const Map<String, IconData> kBibleBookIcons = {
   // -------- Old Testament --------
-  'Gen': Icons.eco_outlined, // garden / creation
-  'Exo': Icons.terrain, // mountain (Sinai)
-  'Lev': Icons.church_outlined, // altar / tabernacle
-  'Num': Icons.grid_view_outlined, // census / numbers
-  'Deu': Icons.menu_book_outlined, // tablets / law
-  'Jos': Icons.shield_outlined, // conquest
-  'Jdg': Icons.gavel, // judges
-  'Rut': Icons.grass_outlined, // gleaning / wheat
-  '1Sa': Icons.workspace_premium_outlined, // crown / kingship
-  '2Sa': Icons.workspace_premium_outlined,
-  '1Ki': Icons.workspace_premium_outlined,
-  '2Ki': Icons.workspace_premium_outlined,
-  '1Ch': Icons.workspace_premium_outlined,
-  '2Ch': Icons.workspace_premium_outlined,
-  'Ezr': Icons.architecture_outlined, // rebuilding the temple
-  'Neh': Icons.foundation_outlined, // rebuilding the wall
-  'Est': Icons.diamond_outlined, // queen / royal
-  'Job': Icons.psychology_outlined, // suffering / wisdom
-  'Psa': Icons.music_note, // songs
-  'Pro': Icons.lightbulb_outline, // wisdom
-  'Ecc': Icons.hourglass_empty, // vanity / time
-  'Sng': Icons.favorite_outline, // love
-  'Isa': Icons.campaign_outlined, // prophecy
-  'Jer': Icons.water_drop_outlined, // weeping prophet
-  'Lam': Icons.water_drop_outlined,
-  'Eze': Icons.visibility_outlined, // visions
-  'Dan': Icons.shield_moon_outlined, // lions' den
-  'Hos': Icons.heart_broken_outlined,
-  'Joe': Icons.bug_report_outlined, // locusts
-  'Amo': Icons.balance, // justice
-  'Oba': Icons.campaign_outlined,
-  'Jon': Icons.waves, // sea / whale
-  'Mic': Icons.balance,
-  'Nah': Icons.campaign_outlined,
-  'Hab': Icons.help_outline, // questioning God
-  'Zep': Icons.campaign_outlined,
-  'Hag': Icons.architecture_outlined,
-  'Zec': Icons.visibility_outlined,
-  'Mal': Icons.campaign_outlined,
+  'Gen': LucideIcons.leaf, // garden / creation
+  'Exo': LucideIcons.mountain, // Sinai
+  'Lev': LucideIcons.landmark, // altar / tabernacle
+  'Num': LucideIcons.grip, // census / numbers
+  'Deu': LucideIcons.scrollText, // the law repeated
+  'Jos': LucideIcons.shield, // conquest
+  'Jdg': LucideIcons.gavel, // judges
+  'Rut': LucideIcons.wheat, // gleaning
+  '1Sa': LucideIcons.crown, // kingship
+  '2Sa': LucideIcons.music, // David's songs
+  '1Ki': LucideIcons.crown,
+  '2Ki': LucideIcons.crown,
+  '1Ch': LucideIcons.scroll,
+  '2Ch': LucideIcons.scroll,
+  'Ezr': LucideIcons.bookOpen, // reading the law
+  'Neh': LucideIcons.hammer, // rebuilding the wall
+  'Est': LucideIcons.crown, // queen / royal
+  'Job': LucideIcons.flame, // trial
+  'Psa': LucideIcons.music2, // songs
+  'Pro': LucideIcons.lamp, // wisdom
+  'Ecc': LucideIcons.sun, // under the sun
+  'Sng': LucideIcons.heart, // love
+  'Isa': LucideIcons.scroll, // prophecy
+  'Jer': LucideIcons.droplet, // weeping prophet
+  'Lam': LucideIcons.droplets,
+  'Eze': LucideIcons.eye, // visions
+  'Dan': LucideIcons.shield, // lions' den
+  'Hos': LucideIcons.heart,
+  'Joe': LucideIcons.sun,
+  'Amo': LucideIcons.wheat,
+  'Oba': LucideIcons.mountain,
+  'Jon': LucideIcons.fish, // sea / whale
+  'Mic': LucideIcons.mountainSnow,
+  'Nah': LucideIcons.flame,
+  'Hab': LucideIcons.eye,
+  'Zep': LucideIcons.flame,
+  'Hag': LucideIcons.hammer,
+  'Zec': LucideIcons.crown,
+  'Mal': LucideIcons.flame,
   // -------- New Testament --------
-  'Mat': Icons.menu_book, // gospel
-  'Mar': Icons.menu_book,
-  'Luk': Icons.menu_book,
-  'John': Icons.menu_book,
-  'Act': Icons.directions_walk, // missionary journeys
-  'Rom': Icons.mail_outline, // epistle
-  '1Co': Icons.mail_outline,
-  '2Co': Icons.mail_outline,
-  'Gal': Icons.mail_outline,
-  'Eph': Icons.mail_outline,
-  'Phi': Icons.mail_outline,
-  'Col': Icons.mail_outline,
-  '1Th': Icons.mail_outline,
-  '2Th': Icons.mail_outline,
-  '1Ti': Icons.mail_outline,
-  '2Ti': Icons.mail_outline,
-  'Tit': Icons.mail_outline,
-  'Phm': Icons.mail_outline,
-  'Heb': Icons.menu_book,
-  'Jas': Icons.mail_outline,
-  '1Pe': Icons.mail_outline,
-  '2Pe': Icons.mail_outline,
-  '1Jo': Icons.mail_outline,
-  '2Jo': Icons.mail_outline,
-  '3Jo': Icons.mail_outline,
-  'Jud': Icons.mail_outline,
-  'Rev': Icons.all_inclusive, // alpha & omega
+  'Mat': LucideIcons.star, // the star / Messiah-King
+  'Mar': LucideIcons.feather, // swift gospel
+  'Luk': LucideIcons.heart,
+  'John': LucideIcons.heart,
+  'Act': LucideIcons.flame, // Pentecost
+  'Rom': LucideIcons.send, // epistle
+  '1Co': LucideIcons.send,
+  '2Co': LucideIcons.send,
+  'Gal': LucideIcons.send,
+  'Eph': LucideIcons.shield, // armour of God
+  'Phi': LucideIcons.heart, // joy
+  'Col': LucideIcons.send,
+  '1Th': LucideIcons.send,
+  '2Th': LucideIcons.send,
+  '1Ti': LucideIcons.users, // pastoral
+  '2Ti': LucideIcons.users,
+  'Tit': LucideIcons.users,
+  'Phm': LucideIcons.handHeart, // reconciliation
+  'Heb': LucideIcons.landmark, // temple / priesthood
+  'Jas': LucideIcons.scale, // faith and works
+  '1Pe': LucideIcons.anchor, // hope
+  '2Pe': LucideIcons.anchor,
+  '1Jo': LucideIcons.heart,
+  '2Jo': LucideIcons.heart,
+  '3Jo': LucideIcons.heart,
+  'Jud': LucideIcons.flame,
+  'Rev': LucideIcons.crown, // King of kings
 };
 
 IconData bibleBookIcon(String osisCode) =>
-    kBibleBookIcons[osisCode] ?? Icons.menu_book_outlined;
+    kBibleBookIcons[osisCode] ?? LucideIcons.bookOpen;

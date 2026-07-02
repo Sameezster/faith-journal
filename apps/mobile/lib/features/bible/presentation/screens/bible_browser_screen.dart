@@ -2,220 +2,184 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/bible_provider/bible_book_icons.dart';
 import '../../../../shared/bible_provider/bible_models.dart';
 import '../../../../shared/bible_provider/bible_providers.dart';
 
-/// Bible browser: title + translation chip, search bar, OT/NT tabs, book list.
-class BibleBrowserScreen extends ConsumerWidget {
+/// Bible — books list. Header with version selector, a search bar, Old/New
+/// Testament tabs and a scrollable list of books.
+class BibleBrowserScreen extends ConsumerStatefulWidget {
   const BibleBrowserScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BibleBrowserScreen> createState() =>
+      _BibleBrowserScreenState();
+}
+
+class _BibleBrowserScreenState extends ConsumerState<BibleBrowserScreen> {
+  int _tab = 0; // 0 = Old Testament, 1 = New Testament
+
+  @override
+  Widget build(BuildContext context) {
     final translation = ref.watch(selectedTranslationProvider);
     final translations = ref.watch(translationsProvider);
     final books = ref.watch(booksProvider(translation));
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: FjColors.cream50,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  FjSpacing.gutter,
-                  FjSpacing.lg,
-                  FjSpacing.gutter,
-                  0,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Bible',
-                        style: Theme.of(context).textTheme.displayLarge,
-                      ),
-                    ),
-                    translations.when(
-                      loading: () => const _TranslationChipSkeleton(),
-                      error: (_, __) => _TranslationChip(
-                        code: translation,
-                        onTap: null,
-                      ),
-                      data: (list) => _TranslationChip(
-                        code: translation,
-                        onTap: () => _pickTranslation(context, ref, list),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: FjSpacing.lg),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: FjSpacing.gutter),
-                child: _SearchBar(),
-              ),
-              const SizedBox(height: FjSpacing.lg),
-              const TabBar(
-                labelColor: FjColors.gold500,
-                unselectedLabelColor: FjColors.navy700,
-                indicatorColor: FjColors.gold500,
-                indicatorWeight: 3,
-                labelStyle: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-                tabs: [
-                  Tab(text: 'Old Testament'),
-                  Tab(text: 'New Testament'),
-                ],
-              ),
-              Expanded(
-                child: books.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => _ErrorView(
-                    message: 'Could not load books.',
-                    onRetry: () => ref.invalidate(booksProvider(translation)),
-                  ),
-                  data: (list) => TabBarView(
-                    children: [
-                      _BookList(
-                        books: list.oldTestament,
-                        translation: translation,
-                      ),
-                      _BookList(
-                        books: list.newTestament,
-                        translation: translation,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickTranslation(
-    BuildContext context,
-    WidgetRef ref,
-    List<Translation> list,
-  ) async {
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: FjColors.surface0,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(FjRadius.cardLg)),
-      ),
-      builder: (ctx) => SafeArea(
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                FjSpacing.gutter,
-                FjSpacing.lg,
-                FjSpacing.gutter,
-                FjSpacing.md,
-              ),
+            // Header.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(
                 children: [
-                  Text(
-                    'Choose translation',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: FjColors.navy900,
-                    ),
+                  Text('Bible', style: AppTextStyles.h1.copyWith(fontSize: 30)),
+                  const Spacer(),
+                  _VersionDropdown(
+                    value: translation,
+                    options: translations.value?.map((t) => t.code).toList() ??
+                        [translation],
+                    onChanged: (v) =>
+                        ref.read(selectedTranslationProvider.notifier).set(v),
                   ),
                 ],
               ),
             ),
-            for (final t in list)
-              ListTile(
-                title: Text(t.code),
-                subtitle: Text(t.name),
-                trailing: ref.read(selectedTranslationProvider) == t.code
-                    ? const Icon(Icons.check, color: FjColors.gold500)
-                    : null,
-                onTap: () => Navigator.pop(ctx, t.code),
+            const SizedBox(height: 16),
+
+            // Search bar.
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _SearchBar(),
+            ),
+            const SizedBox(height: 20),
+
+            // Tabs.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  _TestamentTab(
+                    label: 'Old Testament',
+                    active: _tab == 0,
+                    onTap: () => setState(() => _tab = 0),
+                  ),
+                  _TestamentTab(
+                    label: 'New Testament',
+                    active: _tab == 1,
+                    onTap: () => setState(() => _tab = 1),
+                  ),
+                ],
               ),
+            ),
+            Container(height: 1, color: AppColors.divider),
+
+            // Books list.
+            Expanded(
+              child: books.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _ErrorView(
+                  message: 'Could not load books.',
+                  onRetry: () => ref.invalidate(booksProvider(translation)),
+                ),
+                data: (list) {
+                  final visible =
+                      _tab == 0 ? list.oldTestament : list.newTestament;
+                  if (visible.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          'No books in this section yet.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.body
+                              .copyWith(color: AppColors.warmGray),
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    itemCount: visible.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) =>
+                        _BookRow(book: visible[i], translation: translation),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
-    if (picked != null) {
-      ref.read(selectedTranslationProvider.notifier).set(picked);
-    }
   }
 }
 
-class _TranslationChip extends StatelessWidget {
-  const _TranslationChip({required this.code, required this.onTap});
-  final String code;
-  final VoidCallback? onTap;
+class _VersionDropdown extends StatelessWidget {
+  const _VersionDropdown({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String value;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FjColors.surface0,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: FjColors.gold500.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                code,
-                style: const TextStyle(
-                  color: FjColors.navy900,
-                  fontWeight: FontWeight.w700,
+    return PopupMenuButton<String>(
+      onSelected: onChanged,
+      initialValue: value,
+      color: AppColors.white,
+      offset: const Offset(0, 48),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      itemBuilder: (_) => [
+        for (final v in options)
+          PopupMenuItem<String>(
+            value: v,
+            child: Row(
+              children: [
+                Text(
+                  v,
+                  style: AppTextStyles.body.copyWith(
+                    color: v == value ? AppColors.gold : AppColors.navy,
+                    fontWeight:
+                        v == value ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.keyboard_arrow_down,
-                  size: 18, color: FjColors.gold500),
-            ],
+                if (v == value) ...[
+                  const Spacer(),
+                  const Icon(AppIcons.forward, size: 16, color: AppColors.gold),
+                ],
+              ],
+            ),
           ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppColors.champagne.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
         ),
-      ),
-    );
-  }
-}
-
-class _TranslationChipSkeleton extends StatelessWidget {
-  const _TranslationChipSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 76,
-      height: 36,
-      decoration: BoxDecoration(
-        color: FjColors.surface0,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FjColors.gray300),
-      ),
-      alignment: Alignment.center,
-      child: const SizedBox(
-        height: 14,
-        width: 14,
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(value,
+                style: AppTextStyles.chip.copyWith(
+                    color: AppColors.navy, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 4),
+            const Icon(AppIcons.chevronDown, size: 18, color: AppColors.navy),
+          ],
+        ),
       ),
     );
   }
@@ -226,83 +190,83 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FjColors.surface0,
-      borderRadius: BorderRadius.circular(FjRadius.input),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(FjRadius.input),
-        onTap: () => context.go('/bible/search'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: FjSpacing.lg,
-            vertical: 14,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(FjRadius.input),
-            boxShadow: [
-              BoxShadow(
-                color: FjColors.navy900.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+    return GestureDetector(
+      // The real search experience lives on its own screen.
+      onTap: () => context.push('/bible/search'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        height: 54,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.navy.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(AppIcons.search, size: 20, color: AppColors.warmGray),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Search books or verses',
+                style: AppTextStyles.body.copyWith(color: AppColors.placeholder),
               ),
-            ],
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.search, color: FjColors.gray500),
-              SizedBox(width: FjSpacing.md),
-              Expanded(
-                child: Text(
-                  'Search books or verses',
-                  style: TextStyle(color: FjColors.gray500, fontSize: 14),
-                ),
-              ),
-              Icon(Icons.tune, color: FjColors.gold500),
-            ],
-          ),
+            ),
+            const Icon(AppIcons.filter, size: 20, color: AppColors.sage),
+          ],
         ),
       ),
     );
   }
 }
 
-class _BookList extends StatelessWidget {
-  const _BookList({required this.books, required this.translation});
+class _TestamentTab extends StatelessWidget {
+  const _TestamentTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
-  final List<Book> books;
-  final String translation;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    if (books.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(FjSpacing.xxl),
-          child: Text(
-            'No books in this section yet.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: FjColors.gray500),
-          ),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                label,
+                style: AppTextStyles.body.copyWith(
+                  color: active ? AppColors.gold : AppColors.warmGray,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+            Container(
+              height: 2.5,
+              color: active ? AppColors.gold : Colors.transparent,
+            ),
+          ],
         ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        FjSpacing.gutter,
-        FjSpacing.md,
-        FjSpacing.gutter,
-        FjSpacing.xxxl,
       ),
-      itemCount: books.length,
-      separatorBuilder: (_, __) => const SizedBox(height: FjSpacing.sm),
-      itemBuilder: (_, i) =>
-          _BookCard(book: books[i], translation: translation),
     );
   }
 }
 
-class _BookCard extends StatelessWidget {
-  const _BookCard({required this.book, required this.translation});
+class _BookRow extends StatelessWidget {
+  const _BookRow({required this.book, required this.translation});
 
   final Book book;
   final String translation;
@@ -310,47 +274,39 @@ class _BookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: FjColors.surface0,
-      borderRadius: BorderRadius.circular(FjRadius.card),
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(FjRadius.card),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => context.go(
           '/bible/$translation/${book.osisCode}/${book.firstChapter}',
         ),
         child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(FjRadius.card),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: FjColors.navy900.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+                color: AppColors.navy.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: FjSpacing.md,
-            vertical: FjSpacing.md,
-          ),
           child: Row(
             children: [
-              Icon(
-                bibleBookIcon(book.osisCode),
-                color: FjColors.gold500,
-                size: 26,
-              ),
-              const SizedBox(width: FjSpacing.md),
+              Icon(bibleBookIcon(book.osisCode),
+                  size: 24, color: AppColors.gold),
+              const SizedBox(width: 18),
               Expanded(
                 child: Text(
                   book.name,
-                  style: const TextStyle(
-                    color: FjColors.navy900,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+                  style: AppTextStyles.body
+                      .copyWith(color: AppColors.navy, fontSize: 17),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: FjColors.gray500),
+              const Icon(AppIcons.forward,
+                  size: 20, color: AppColors.placeholder),
             ],
           ),
         ),
@@ -368,16 +324,16 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(FjSpacing.xxl),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: FjColors.gray500),
+              style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
             ),
-            const SizedBox(height: FjSpacing.md),
+            const SizedBox(height: 12),
             OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),

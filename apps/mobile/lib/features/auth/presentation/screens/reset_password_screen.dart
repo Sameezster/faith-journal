@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/sparkle_divider.dart';
 import '../providers/auth_providers.dart';
 import 'auth_errors.dart';
 
+/// Reset Password screen — request a password reset link by email.
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -24,7 +30,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     super.dispose();
   }
 
-  Future<void> _sendReset() async {
+  Future<void> _sendResetLink() async {
     if (_busy) return;
     final email = _email.text.trim();
     if (email.isEmpty) {
@@ -55,52 +61,80 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        leading: const BackButton(),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(FjSpacing.xxl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 24),
-              Text(
-                'Reset Password',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displayLarge,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(AppAssets.backgroundSoft, fit: BoxFit.cover),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Back arrow.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(AppIcons.backArrow, color: AppColors.navy),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Logo.
+                  Center(child: Image.asset(AppAssets.logo, width: 170)),
+                  const SizedBox(height: 28),
+
+                  // Title.
+                  Text(
+                    'Reset Password',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.appTitle.copyWith(fontSize: 36),
+                  ),
+                  const SizedBox(height: 14),
+                  const Center(
+                    child: SparkleDivider(lineWidth: 44, sparkleSize: 15),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Enter your email and we'll send you a reset link",
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Email field.
+                  AppTextField(
+                    hint: 'Email',
+                    icon: AppIcons.mail,
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Primary action.
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _busy ? null : _sendResetLink,
+                      child: _busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Send Reset Link'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              const Text(
-                "Enter your email and we'll send you a reset link",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FjColors.gray500),
-              ),
-              const SizedBox(height: FjSpacing.xxl),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: const InputDecoration(hintText: 'Email'),
-              ),
-              const SizedBox(height: FjSpacing.lg),
-              ElevatedButton(
-                onPressed: _busy ? null : _sendReset,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Send Reset Link'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

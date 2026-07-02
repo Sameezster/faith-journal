@@ -2,44 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/journal/journal_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
 /// Suggested tags shown in the verse action sheet. We can replace this with
 /// AI-driven suggestions later — kept static so the sheet works offline.
-const List<({String slug, String label, IconData icon, Color color})>
-    _suggestedTags = [
-  (
-    slug: 'faith',
-    label: 'Faith',
-    icon: Icons.eco_outlined,
-    color: FjColors.sage500,
-  ),
-  (
-    slug: 'hope',
-    label: 'Hope',
-    icon: Icons.anchor,
-    color: FjColors.gold500,
-  ),
-  (
-    slug: 'strength',
-    label: 'Strength',
-    icon: Icons.shield_outlined,
-    color: FjColors.sage500,
-  ),
-  (
-    slug: 'wisdom',
-    label: 'Wisdom',
-    icon: Icons.lightbulb_outline,
-    color: FjColors.gold500,
-  ),
+const List<({String slug, String label, IconData icon})> _suggestedTags = [
+  (slug: 'faith', label: 'Faith', icon: LucideIcons.leaf),
+  (slug: 'hope', label: 'Hope', icon: LucideIcons.anchor),
+  (slug: 'strength', label: 'Strength', icon: LucideIcons.shield),
+  (slug: 'wisdom', label: 'Wisdom', icon: LucideIcons.bookOpen),
 ];
 
 /// Bottom sheet shown when a verse is tapped. Lets the user save, highlight,
 /// tag, add a reflection, or share. Save / Add Reflection / Share are wired;
-/// Highlight and Add Tag are placeholders that show a snackbar for now.
+/// Highlight and Add Tag are placeholders for now.
 Future<void> showVerseActionSheet(
   BuildContext context, {
   required String translation,
@@ -51,13 +33,12 @@ Future<void> showVerseActionSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: FjColors.surface0,
+    backgroundColor: AppColors.white,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(FjRadius.cardLg)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (ctx) => _VerseActionSheet(
+    builder: (_) => _VerseActionSheet(
       translation: translation,
       book: book,
       chapter: chapter,
@@ -143,141 +124,147 @@ class _VerseActionSheetState extends ConsumerState<_VerseActionSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          FjSpacing.gutter,
-          FjSpacing.lg,
-          FjSpacing.gutter,
-          FjSpacing.lg,
-        ),
+        padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Grab handle.
             Center(
               child: Container(
-                width: 36,
+                width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: FjColors.gray300,
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.placeholder.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(3),
                 ),
               ),
             ),
-            const SizedBox(height: FjSpacing.lg),
-            _VerseHeader(
-              reference: widget.verseReference,
-              text: widget.verseText,
+            const SizedBox(height: 22),
+
+            // Verse preview.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.champagne.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(AppIcons.bible,
+                      size: 23, color: AppColors.gold),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.verseReference,
+                          style: AppTextStyles.verseReference),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.verseText,
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.charcoal.withValues(alpha: 0.85),
+                          height: 1.45,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: FjSpacing.lg),
-            const Divider(height: 1, color: FjColors.gray300),
-            const SizedBox(height: FjSpacing.md),
-            _ActionRow(
-              actions: [
-                _Action(
-                  icon: Icons.bookmark_outline,
+            const SizedBox(height: 22),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 20),
+
+            // Actions.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SheetAction(
+                  icon: AppIcons.bookmark,
                   label: 'Save',
-                  selected: false,
                   busy: _saving,
                   onTap: _save,
                 ),
-                _Action(
-                  icon: Icons.edit_outlined,
+                _SheetAction(
+                  icon: LucideIcons.penLine,
                   label: 'Highlight',
-                  selected: _highlighted,
-                  busy: false,
+                  active: _highlighted,
                   onTap: () => setState(() => _highlighted = !_highlighted),
                 ),
-                _Action(
-                  icon: Icons.local_offer_outlined,
+                _SheetAction(
+                  icon: AppIcons.tag,
                   label: 'Add Tag',
-                  selected: false,
-                  busy: false,
                   onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tap a tag below, then Save.'),
-                    ),
+                    const SnackBar(content: Text('Tap a tag below, then Save.')),
                   ),
                 ),
-                _Action(
-                  icon: Icons.description_outlined,
+                _SheetAction(
+                  icon: AppIcons.noteLines,
                   label: 'Add Reflection',
-                  selected: false,
-                  busy: false,
                   onTap: _addReflection,
                 ),
-                _Action(
-                  icon: Icons.ios_share_outlined,
+                _SheetAction(
+                  icon: AppIcons.share,
                   label: 'Share',
-                  selected: false,
-                  busy: false,
                   onTap: _share,
                 ),
               ],
             ),
-            const SizedBox(height: FjSpacing.lg),
-            const Divider(height: 1, color: FjColors.gray300),
-            const SizedBox(height: FjSpacing.md),
+            const SizedBox(height: 24),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 18),
+
+            // Suggested tags.
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
-                  child: Text(
-                    'Suggested Tags',
-                    style: TextStyle(
-                      color: FjColors.navy900,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                Text('Suggested Tags',
+                    style: AppTextStyles.h2.copyWith(fontSize: 17)),
+                GestureDetector(
                   onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                         content: Text('Tag management — coming soon.')),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Manage Tags',
-                          style: TextStyle(
-                            color: FjColors.gold500,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(Icons.chevron_right,
-                            size: 18, color: FjColors.gold500),
-                      ],
-                    ),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      Text('Manage Tags',
+                          style: AppTextStyles.body.copyWith(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14)),
+                      const Icon(AppIcons.forward,
+                          size: 16, color: AppColors.gold),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: FjSpacing.md),
+            const SizedBox(height: 16),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _suggestedTags.map((t) {
-                final isSelected = _selectedTags.contains(t.slug);
-                return _TagChip(
-                  label: t.label,
-                  icon: t.icon,
-                  color: t.color,
-                  selected: isSelected,
-                  onTap: () => setState(() {
-                    if (isSelected) {
-                      _selectedTags.remove(t.slug);
-                    } else {
-                      _selectedTags.add(t.slug);
-                    }
-                  }),
-                );
-              }).toList(),
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final t in _suggestedTags)
+                  _TagPill(
+                    icon: t.icon,
+                    label: t.label,
+                    active: _selectedTags.contains(t.slug),
+                    onTap: () => setState(() {
+                      if (!_selectedTags.remove(t.slug)) {
+                        _selectedTags.add(t.slug);
+                      }
+                    }),
+                  ),
+              ],
             ),
           ],
         ),
@@ -286,115 +273,51 @@ class _VerseActionSheetState extends ConsumerState<_VerseActionSheet> {
   }
 }
 
-class _VerseHeader extends StatelessWidget {
-  const _VerseHeader({required this.reference, required this.text});
-
-  final String reference;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: FjColors.gold500.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: const Icon(Icons.menu_book, color: FjColors.gold500, size: 22),
-        ),
-        const SizedBox(width: FjSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                reference,
-                style: const TextStyle(
-                  fontFamily: 'PlayfairDisplay',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  color: FjColors.navy900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                text,
-                style: const TextStyle(
-                  color: FjColors.navy700,
-                  fontSize: 14,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({required this.actions});
-  final List<_Action> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: actions,
-    );
-  }
-}
-
-class _Action extends StatelessWidget {
-  const _Action({
+class _SheetAction extends StatelessWidget {
+  const _SheetAction({
     required this.icon,
     required this.label,
-    required this.selected,
-    required this.busy,
     required this.onTap,
+    this.active = false,
+    this.busy = false,
   });
 
   final IconData icon;
   final String label;
-  final bool selected;
-  final bool busy;
   final VoidCallback onTap;
+  final bool active;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? FjColors.gold500 : FjColors.navy700;
+    final iconColor = active ? AppColors.gold : AppColors.navy;
+    // Icon-only action — each gets an equal column with a soft tinted chip.
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: busy ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            children: [
-              busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
+      child: Center(
+        child: InkWell(
+          onTap: busy ? null : onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: active
+                  ? AppColors.gold.withValues(alpha: 0.14)
+                  : AppColors.champagne.withValues(alpha: 0.32),
+              borderRadius: BorderRadius.circular(15),
+              border: active
+                  ? Border.all(color: AppColors.gold.withValues(alpha: 0.4))
+                  : null,
+            ),
+            child: busy
+                ? const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(icon, color: color, size: 26),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+                    ),
+                  )
+                : Icon(icon, size: 23, color: iconColor),
           ),
         ),
       ),
@@ -402,48 +325,49 @@ class _Action extends StatelessWidget {
   }
 }
 
-class _TagChip extends StatelessWidget {
-  const _TagChip({
-    required this.label,
+class _TagPill extends StatelessWidget {
+  const _TagPill({
     required this.icon,
-    required this.color,
-    required this.selected,
+    required this.label,
     required this.onTap,
+    this.active = false,
   });
 
-  final String label;
   final IconData icon;
-  final Color color;
-  final bool selected;
+  final String label;
   final VoidCallback onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.18)
-              : color.withValues(alpha: 0.08),
+          color: active
+              ? AppColors.gold.withValues(alpha: 0.14)
+              : AppColors.sage.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: selected ? color : color.withValues(alpha: 0.25),
+            color: active
+                ? AppColors.gold.withValues(alpha: 0.5)
+                : AppColors.sage.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
+            Icon(icon,
+                size: 15, color: active ? AppColors.gold : AppColors.sage),
+            const SizedBox(width: 7),
             Text(
               label,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+              style: AppTextStyles.body.copyWith(
+                fontSize: 13.5,
+                color: active ? AppColors.gold : AppColors.navy,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ],

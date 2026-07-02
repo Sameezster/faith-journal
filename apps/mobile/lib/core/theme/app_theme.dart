@@ -1,76 +1,200 @@
 import 'package:flutter/material.dart';
 
-import 'tokens.dart';
+import 'app_colors.dart';
+import 'app_text_styles.dart';
 
-/// Builds the app ThemeData from design tokens.
-/// Display/headings use a serif (Playfair Display); UI/body uses a sans (Inter).
-/// Fonts are bundled locally in assets/fonts/ — no runtime download.
+/// Assembles the Faith Journal [ThemeData].
+///
+/// Use `AppTheme.light` as the app's `theme`. Individual widgets should still
+/// reach for [AppColors] / [AppTextStyles] directly when they need a specific
+/// brand token, but most Material defaults are pre-styled here.
 class AppTheme {
-  static const _serif = 'PlayfairDisplay';
-  static const _sans = 'Inter';
+  AppTheme._();
 
-  static ThemeData light() {
-    final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
-    final sans = base.textTheme.apply(fontFamily: _sans);
+  /// Shared radius for cards, buttons and inputs (~18px per the design spec).
+  static const double radius = 18.0;
+  static final BorderRadius borderRadius = BorderRadius.circular(radius);
 
-    return base.copyWith(
-      scaffoldBackgroundColor: FjColors.cream50,
-      colorScheme: const ColorScheme.light(
-        primary: FjColors.gold500,
-        onPrimary: Colors.white,
-        secondary: FjColors.navy900,
-        surface: FjColors.surface0,
-        onSurface: FjColors.navy900,
+  static ThemeData get light {
+    const colorScheme = ColorScheme.light(
+      primary: AppColors.gold,
+      onPrimary: AppColors.white,
+      secondary: AppColors.sage,
+      onSecondary: AppColors.navy,
+      surface: AppColors.white,
+      onSurface: AppColors.charcoal,
+      error: AppColors.error,
+      onError: AppColors.white,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: AppColors.ivory,
+      splashColor: AppColors.gold.withValues(alpha: 0.12),
+      highlightColor: AppColors.gold.withValues(alpha: 0.08),
+      dividerColor: AppColors.divider,
+
+      // -----------------------------------------------------------------------
+      // Text
+      // -----------------------------------------------------------------------
+      textTheme: TextTheme(
+        displayLarge: AppTextStyles.appTitle,
+        headlineLarge: AppTextStyles.h1,
+        headlineMedium: AppTextStyles.h2,
+        titleLarge: AppTextStyles.verseReference,
+        bodyLarge: AppTextStyles.body,
+        bodyMedium: AppTextStyles.body,
+        labelLarge: AppTextStyles.label,
+        bodySmall: AppTextStyles.caption,
       ),
-      textTheme: sans.copyWith(
-        displayLarge: const TextStyle(
-          fontFamily: _serif,
-          fontWeight: FontWeight.bold,
-          color: FjColors.navy900,
-        ),
-        headlineMedium: const TextStyle(
-          fontFamily: _serif,
-          fontWeight: FontWeight.bold,
-          color: FjColors.navy900,
-        ),
-        titleLarge: const TextStyle(
-          fontFamily: _serif,
-          fontWeight: FontWeight.w600,
-          color: FjColors.navy900,
-        ),
-        bodyMedium: sans.bodyMedium?.copyWith(color: FjColors.navy700),
-        bodySmall: sans.bodySmall?.copyWith(color: FjColors.gray500),
+
+      // -----------------------------------------------------------------------
+      // App bar
+      // -----------------------------------------------------------------------
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColors.ivory,
+        foregroundColor: AppColors.navy,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: AppTextStyles.h2,
+        iconTheme: const IconThemeData(color: AppColors.navy),
       ),
+
+      // -----------------------------------------------------------------------
+      // Cards
+      // -----------------------------------------------------------------------
+      cardTheme: CardThemeData(
+        color: AppColors.white,
+        elevation: 1.5,
+        shadowColor: AppColors.navy.withValues(alpha: 0.08),
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: borderRadius),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Buttons
+      // -----------------------------------------------------------------------
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: FjColors.gold500,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(FjRadius.button),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: _sans,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+          backgroundColor: AppColors.gold,
+          foregroundColor: AppColors.white,
+          disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.5),
+          minimumSize: const Size.fromHeight(54),
+          elevation: 0,
+          textStyle: AppTextStyles.button,
+          shape: RoundedRectangleBorder(borderRadius: borderRadius),
         ),
       ),
-      cardTheme: CardThemeData(
-        color: FjColors.surface0,
-        elevation: 2,
-        shadowColor: FjColors.navy900.withValues(alpha: 0.08),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(FjRadius.card),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.gold,
+          textStyle: AppTextStyles.link,
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.navy,
+          backgroundColor: AppColors.white,
+          minimumSize: const Size.fromHeight(54),
+          side: const BorderSide(color: AppColors.divider),
+          textStyle: AppTextStyles.chip,
+          shape: RoundedRectangleBorder(borderRadius: borderRadius),
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Inputs
+      // -----------------------------------------------------------------------
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: FjColors.surface0,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(FjRadius.input),
-          borderSide: BorderSide.none,
+        fillColor: AppColors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        hintStyle: AppTextStyles.body.copyWith(color: AppColors.placeholder),
+        labelStyle: AppTextStyles.label,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.divider),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        ),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Chips (tags / filters)
+      // -----------------------------------------------------------------------
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.champagne.withValues(alpha: 0.5),
+        selectedColor: AppColors.gold,
+        labelStyle: AppTextStyles.chip,
+        secondaryLabelStyle: AppTextStyles.chipActive,
+        side: BorderSide.none,
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      ),
+
+      // -----------------------------------------------------------------------
+      // Bottom navigation
+      // -----------------------------------------------------------------------
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: AppColors.white,
+        selectedItemColor: AppColors.gold,
+        unselectedItemColor: AppColors.warmGray,
+        selectedLabelStyle: AppTextStyles.navLabelActive,
+        unselectedLabelStyle: AppTextStyles.navLabel,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+        showUnselectedLabels: true,
+      ),
+
+      // -----------------------------------------------------------------------
+      // Floating action button (e.g. "+" on Prayers)
+      // -----------------------------------------------------------------------
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.gold,
+        foregroundColor: AppColors.white,
+        elevation: 2,
+      ),
+
+      // -----------------------------------------------------------------------
+      // Bottom sheets (verse-action sheet)
+      // -----------------------------------------------------------------------
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.white,
+        modalBackgroundColor: AppColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.white
+              : AppColors.white,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.gold
+              : AppColors.placeholder,
+        ),
+      ),
+
+      dividerTheme: const DividerThemeData(
+        color: AppColors.divider,
+        thickness: 1,
+        space: 1,
       ),
     );
   }

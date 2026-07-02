@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/bible_provider/bible_models.dart';
 import '../../../../shared/bible_provider/bible_providers.dart';
+import '../../../../shared/journal/journal_providers.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import 'verse_action_sheet.dart';
 
-/// Focused reading view for a single Bible chapter.
-/// Top bar: back, prev/next, chapter title (tap to pick), translation chip.
-/// Below the bar: a thin action toolbar (Chapter · Search · Bookmark · Text).
-/// Tap any verse to open the action sheet.
+/// Bible — chapter reading view. Comfortable serif scripture with selectable
+/// verses, a chapter navigator, a tool row and a slim action bar.
 class BibleChapterScreen extends ConsumerStatefulWidget {
   const BibleChapterScreen({
     super.key,
@@ -24,12 +27,108 @@ class BibleChapterScreen extends ConsumerStatefulWidget {
   final int chapter;
 
   @override
-  ConsumerState<BibleChapterScreen> createState() => _BibleChapterScreenState();
+  ConsumerState<BibleChapterScreen> createState() =>
+      _BibleChapterScreenState();
 }
 
 class _BibleChapterScreenState extends ConsumerState<BibleChapterScreen> {
-  int? _highlightedVerse;
+  int? _selected;
   double _fontScale = 1.0;
+
+  void _go(String translation, int chapter) {
+    context.go('/bible/$translation/${widget.book}/$chapter');
+  }
+
+  Future<void> _pickChapter(Book bookMeta) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => _ChapterPicker(
+        bookName: bookMeta.name,
+        chapters: bookMeta.chaptersAvailable,
+        selected: widget.chapter,
+      ),
+    );
+    if (picked != null && picked != widget.chapter) {
+      _go(widget.translation, picked);
+    }
+  }
+
+  void _openSheet(Chapter c, Verse v) {
+    showVerseActionSheet(
+      context,
+      translation: widget.translation,
+      book: widget.book,
+      chapter: widget.chapter,
+      verseNumber: v.number,
+      verseReference: '${c.bookName} ${c.chapter}:${v.number}',
+      verseText: v.text,
+    );
+  }
+
+  void _onVerseTap(Chapter c, Verse v) {
+    if (_selected == v.number) {
+      // Second tap on the selected verse → open the full action sheet.
+      _openSheet(c, v);
+    } else {
+      setState(() => _selected = v.number);
+    }
+  }
+
+  Future<void> _saveVerse(Chapter c, Verse v) async {
+    final user = ref.read(authStateProvider).value;
+    if (user == null) return;
+    final reference = '${c.bookName} ${c.chapter}:${v.number}';
+    try {
+      await ref.read(journalRepositoryProvider).createVerseEntry(
+            user.uid,
+            verseRef:
+                '${widget.translation}:${widget.book}:${widget.chapter}:${v.number}',
+            verseReference: reference,
+            verseText: v.text,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Saved $reference to journal.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _shareVerse(Chapter c, Verse v) async {
+    final reference = '${c.bookName} ${c.chapter}:${v.number}';
+    await Clipboard.setData(ClipboardData(
+      text: '"${v.text}"\n— $reference (${widget.translation})',
+    ));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copied to clipboard.')),
+    );
+  }
+
+  void _onSlimAction(Chapter c, String label) {
+    final v = c.verses.firstWhere((e) => e.number == _selected);
+    switch (label) {
+      case 'Save':
+        _saveVerse(c, v);
+      case 'Note':
+        context.go(
+          '/journal/new?ref=${widget.translation}:${widget.book}:${widget.chapter}:${v.number}',
+        );
+      case 'Share':
+        _shareVerse(c, v);
+      default: // Highlight → full sheet, matching the design.
+        _openSheet(c, v);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,38 +137,57 @@ class _BibleChapterScreenState extends ConsumerState<BibleChapterScreen> {
     );
     final booksAsync = ref.watch(booksProvider(widget.translation));
     final bookMeta = booksAsync.value?.findByOsis(widget.book);
+    final versions = ref.watch(translationsProvider).value?.map((t) => t.code).toList() ??
+        [widget.translation];
+
+    final chapters = bookMeta?.chaptersAvailable ?? const <int>[];
+    final idx = chapters.indexOf(widget.chapter);
+    final prev = idx > 0 ? chapters[idx - 1] : null;
+    final next =
+        idx >= 0 && idx < chapters.length - 1 ? chapters[idx + 1] : null;
+
+    final bookName =
+        chapterAsync.value?.bookName ?? bookMeta?.name ?? widget.book;
+    final reference = '$bookName ${widget.chapter}';
 
     return Scaffold(
-      backgroundColor: FjColors.cream50,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             _TopBar(
-              translation: widget.translation,
-              currentChapter: widget.chapter,
-              bookName:
-                  chapterAsync.value?.bookName ?? bookMeta?.name ?? widget.book,
-              bookMeta: bookMeta,
-              onJumpChapter: (n) => context.go(
-                '/bible/${widget.translation}/${widget.book}/$n',
-              ),
+              reference: reference,
+              version: widget.translation,
+              versions: versions,
               onBack: () => context.go('/bible'),
-            ),
-            _ActionToolbar(
-              onChapter: () {
-                if (bookMeta != null) {
-                  _openChapterPicker(context, bookMeta);
-                }
+              onTapChapter:
+                  bookMeta == null ? null : () => _pickChapter(bookMeta),
+              onPrev: prev == null
+                  ? null
+                  : () => _go(widget.translation, prev),
+              onNext: next == null
+                  ? null
+                  : () => _go(widget.translation, next),
+              onVersionChanged: (v) {
+                ref.read(selectedTranslationProvider.notifier).set(v);
+                _go(v, widget.chapter);
               },
-              onSearch: () => context.go('/bible/search'),
+            ),
+            _ToolRow(
+              onChapter:
+                  bookMeta == null ? null : () => _pickChapter(bookMeta),
+              onSearch: () => context.push('/bible/search'),
               onBookmark: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Bookmarks — coming soon.')),
               ),
               onText: _openTextSizeSheet,
             ),
+
+            // Scripture.
             Expanded(
               child: chapterAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
                 error: (e, _) => _ErrorView(
                   error: e,
                   onRetry: () => ref.invalidate(
@@ -80,11 +198,34 @@ class _BibleChapterScreenState extends ConsumerState<BibleChapterScreen> {
                     ),
                   ),
                 ),
-                data: (c) => _VerseList(
-                  chapter: c,
-                  highlightedVerse: _highlightedVerse,
-                  fontScale: _fontScale,
-                  onTapVerse: (v) => _openVerseSheet(c, v),
+                data: (c) => Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(6, 18, 6, 24),
+                        itemCount: c.verses.length,
+                        itemBuilder: (_, i) {
+                          final v = c.verses[i];
+                          return _VerseTile(
+                            verse: v,
+                            fontScale: _fontScale,
+                            selected: _selected == v.number,
+                            onTap: () => _onVerseTap(c, v),
+                            onLongPress: () {
+                              setState(() => _selected = v.number);
+                              _openSheet(c, v);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Slim action bar — visible while a verse is selected.
+                    if (_selected != null)
+                      _SlimActionBar(
+                        onAction: (label) => _onSlimAction(c, label),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -92,269 +233,199 @@ class _BibleChapterScreenState extends ConsumerState<BibleChapterScreen> {
         ),
       ),
     );
-  }
-
-  void _openVerseSheet(Chapter c, Verse v) {
-    setState(() => _highlightedVerse = v.number);
-    showVerseActionSheet(
-      context,
-      translation: widget.translation,
-      book: widget.book,
-      chapter: widget.chapter,
-      verseNumber: v.number,
-      verseReference: '${c.bookName} ${c.chapter}:${v.number}',
-      verseText: v.text,
-    ).whenComplete(() {
-      if (mounted) setState(() => _highlightedVerse = null);
-    });
   }
 
   Future<void> _openTextSizeSheet() async {
     final picked = await showModalBottomSheet<double>(
       context: context,
-      backgroundColor: FjColors.surface0,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(FjRadius.cardLg)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                FjSpacing.gutter,
-                FjSpacing.lg,
-                FjSpacing.gutter,
-                FjSpacing.sm,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Text size',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: FjColors.navy900,
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.placeholder.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
               ),
-            ),
-            for (final entry in const [
-              ('Small', 0.85),
-              ('Default', 1.0),
-              ('Large', 1.2),
-              ('Extra large', 1.4),
-            ])
-              ListTile(
-                title: Text(entry.$1),
-                trailing: (_fontScale - entry.$2).abs() < 0.01
-                    ? const Icon(Icons.check, color: FjColors.gold500)
-                    : null,
-                onTap: () => Navigator.pop(ctx, entry.$2),
-              ),
-            const SizedBox(height: FjSpacing.sm),
-          ],
+              const SizedBox(height: 18),
+              Text('Text size', style: AppTextStyles.h2.copyWith(fontSize: 18)),
+              const SizedBox(height: 8),
+              for (final entry in const [
+                ('Small', 0.85),
+                ('Default', 1.0),
+                ('Large', 1.2),
+                ('Extra large', 1.4),
+              ])
+                InkWell(
+                  onTap: () => Navigator.pop(ctx, entry.$2),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Text(
+                          entry.$1,
+                          style: AppTextStyles.body.copyWith(
+                            color: (_fontScale - entry.$2).abs() < 0.01
+                                ? AppColors.gold
+                                : AppColors.navy,
+                            fontWeight: (_fontScale - entry.$2).abs() < 0.01
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        if ((_fontScale - entry.$2).abs() < 0.01)
+                          const Icon(AppIcons.check,
+                              size: 20, color: AppColors.gold),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
     if (picked != null) setState(() => _fontScale = picked);
   }
-
-  void _openChapterPicker(BuildContext context, Book bookMeta) {
-    final chapters = bookMeta.chaptersAvailable;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: FjColors.surface0,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(FjRadius.cardLg)),
-      ),
-      builder: (sheetCtx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (_, scrollController) => Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  FjSpacing.gutter,
-                  FjSpacing.lg,
-                  FjSpacing.gutter,
-                  FjSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${bookMeta.name} — pick a chapter',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: FjColors.navy900,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(sheetCtx),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, color: FjColors.gray300),
-              Expanded(
-                child: GridView.builder(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(FjSpacing.gutter),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 6,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 1.0,
-                  ),
-                  itemCount: chapters.length,
-                  itemBuilder: (_, i) {
-                    final n = chapters[i];
-                    final current = n == widget.chapter;
-                    return InkWell(
-                      onTap: () {
-                        Navigator.pop(sheetCtx);
-                        if (n != widget.chapter) {
-                          context.go(
-                            '/bible/${widget.translation}/${widget.book}/$n',
-                          );
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(FjRadius.chip),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: current ? FjColors.gold500 : FjColors.surface0,
-                          border: Border.all(
-                            color:
-                                current ? FjColors.gold500 : FjColors.gray300,
-                          ),
-                          borderRadius: BorderRadius.circular(FjRadius.chip),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$n',
-                          style: TextStyle(
-                            color: current ? Colors.white : FjColors.navy900,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
+// ---------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------
 class _TopBar extends StatelessWidget {
   const _TopBar({
-    required this.translation,
-    required this.currentChapter,
-    required this.bookName,
-    required this.bookMeta,
-    required this.onJumpChapter,
+    required this.reference,
+    required this.version,
+    required this.versions,
     required this.onBack,
+    required this.onTapChapter,
+    required this.onPrev,
+    required this.onNext,
+    required this.onVersionChanged,
   });
 
-  final String translation;
-  final int currentChapter;
-  final String bookName;
-  final Book? bookMeta;
-  final ValueChanged<int> onJumpChapter;
+  final String reference;
+  final String version;
+  final List<String> versions;
   final VoidCallback onBack;
+  final VoidCallback? onTapChapter;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final ValueChanged<String> onVersionChanged;
 
   @override
   Widget build(BuildContext context) {
-    final chapters = bookMeta?.chaptersAvailable ?? [];
-    final idx = chapters.indexOf(currentChapter);
-    final prev = idx > 0 ? chapters[idx - 1] : null;
-    final next =
-        idx >= 0 && idx < chapters.length - 1 ? chapters[idx + 1] : null;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        FjSpacing.md,
-        FjSpacing.sm,
-        FjSpacing.md,
-        FjSpacing.md,
-      ),
+      padding: const EdgeInsets.fromLTRB(8, 6, 12, 10),
       child: Row(
         children: [
-          _CircleIconButton(icon: Icons.arrow_back, onTap: onBack),
-          const SizedBox(width: FjSpacing.sm),
-          _CircleIconButton(
-            icon: Icons.chevron_left,
-            onTap: prev == null ? null : () => onJumpChapter(prev),
+          IconButton(
+            onPressed: onBack,
+            icon: const Icon(AppIcons.back, color: AppColors.navy),
           ),
           Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: bookMeta == null
-                  ? null
-                  : () {
-                      // Title tap opens picker — handled by parent
-                    },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    '$bookName $currentChapter',
-                    style: const TextStyle(
-                      fontFamily: 'PlayfairDisplay',
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20,
-                      color: FjColors.navy900,
+                  _NavArrow(icon: AppIcons.back, onTap: onPrev),
+                  Expanded(
+                    child: InkWell(
+                      onTap: onTapChapter,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                reference,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: AppTextStyles.h2.copyWith(fontSize: 20),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(AppIcons.chevronDown,
+                                size: 20, color: AppColors.navy),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down,
-                      size: 22, color: FjColors.navy900),
+                  _NavArrow(icon: AppIcons.forward, onTap: onNext),
                 ],
               ),
             ),
           ),
-          _CircleIconButton(
-            icon: Icons.chevron_right,
-            onTap: next == null ? null : () => onJumpChapter(next),
-          ),
-          const SizedBox(width: FjSpacing.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: FjColors.gold500.withValues(alpha: 0.3)),
-              color: FjColors.surface0,
+          PopupMenuButton<String>(
+            onSelected: onVersionChanged,
+            initialValue: version,
+            color: AppColors.white,
+            offset: const Offset(0, 44),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  translation,
-                  style: const TextStyle(
-                    color: FjColors.navy900,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+            itemBuilder: (_) => [
+              for (final v in versions)
+                PopupMenuItem<String>(
+                  value: v,
+                  child: Row(
+                    children: [
+                      Text(
+                        v,
+                        style: AppTextStyles.body.copyWith(
+                          color:
+                              v == version ? AppColors.gold : AppColors.navy,
+                          fontWeight:
+                              v == version ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                      if (v == version) ...[
+                        const Spacer(),
+                        const Icon(AppIcons.forward,
+                            size: 16, color: AppColors.gold),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(width: 2),
-                const Icon(Icons.keyboard_arrow_down,
-                    size: 16, color: FjColors.gold500),
-              ],
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.champagne.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border:
+                    Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(version,
+                      style: AppTextStyles.chip.copyWith(
+                          color: AppColors.navy, fontWeight: FontWeight.w600)),
+                  const Icon(AppIcons.chevronDown,
+                      size: 16, color: AppColors.navy),
+                ],
+              ),
             ),
           ),
         ],
@@ -363,40 +434,45 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({required this.icon, required this.onTap});
+/// Prev/next chapter arrow — dims when disabled (e.g. prev on chapter 1).
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.onTap});
+
   final IconData icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final disabled = onTap == null;
+    final enabled = onTap != null;
     return InkWell(
-      borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: const BoxDecoration(shape: BoxShape.circle),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
         child: Icon(
           icon,
-          color: disabled ? FjColors.gray300 : FjColors.navy900,
           size: 22,
+          color: enabled
+              ? AppColors.warmGray
+              : AppColors.warmGray.withValues(alpha: 0.3),
         ),
       ),
     );
   }
 }
 
-class _ActionToolbar extends StatelessWidget {
-  const _ActionToolbar({
+// ---------------------------------------------------------------------------
+// Tool row
+// ---------------------------------------------------------------------------
+class _ToolRow extends StatelessWidget {
+  const _ToolRow({
     required this.onChapter,
     required this.onSearch,
     required this.onBookmark,
     required this.onText,
   });
 
-  final VoidCallback onChapter;
+  final VoidCallback? onChapter;
   final VoidCallback onSearch;
   final VoidCallback onBookmark;
   final VoidCallback onText;
@@ -404,61 +480,108 @@ class _ActionToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(
-          top: BorderSide(color: FjColors.gray300),
-          bottom: BorderSide(color: FjColors.gray300),
-        ),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _ToolbarItem(
-              icon: Icons.menu_book_outlined,
-              label: 'Chapter',
-              onTap: onChapter),
-          _ToolbarItem(icon: Icons.search, label: 'Search', onTap: onSearch),
-          _ToolbarItem(
-              icon: Icons.bookmark_outline,
-              label: 'Bookmark',
-              onTap: onBookmark),
-          _ToolbarItem(icon: Icons.text_fields, label: 'Text', onTap: onText),
+          _Tool(icon: AppIcons.bible, label: 'Chapter', onTap: onChapter),
+          _Tool(icon: AppIcons.search, label: 'Search', onTap: onSearch),
+          _Tool(icon: AppIcons.bookmark, label: 'Bookmark', onTap: onBookmark),
+          _Tool(icon: AppIcons.textSize, label: 'Text', onTap: onText),
         ],
       ),
     );
   }
 }
 
-class _ToolbarItem extends StatelessWidget {
-  const _ToolbarItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _Tool extends StatelessWidget {
+  const _Tool({required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.navy),
+          const SizedBox(width: 7),
+          Text(label,
+              style: AppTextStyles.body
+                  .copyWith(color: AppColors.charcoal, fontSize: 15)),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Verse tile
+// ---------------------------------------------------------------------------
+class _VerseTile extends StatelessWidget {
+  const _VerseTile({
+    required this.verse,
+    required this.fontScale,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final Verse verse;
+  final double fontScale;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: ValueKey(verse.number),
+      onTap: onTap,
+      onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
+      // Padding is identical whether selected or not, so the text never
+      // shifts when a verse is highlighted. The highlight toggles instantly
+      // (no fade) so switching between verses never cross-fades / blinks.
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.champagne.withValues(alpha: 0.7)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text.rich(
+          TextSpan(
             children: [
-              Icon(icon, color: FjColors.navy700, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: FjColors.navy700,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+              TextSpan(
+                text: '${verse.number} ',
+                style: AppTextStyles.scripture.copyWith(
+                  fontSize: 13 * fontScale,
+                  height: 1.7,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gold,
                 ),
+              ),
+              TextSpan(
+                text: verse.text,
+                style: AppTextStyles.scripture
+                    .copyWith(fontSize: 18 * fontScale, height: 1.7),
               ),
             ],
           ),
@@ -468,73 +591,167 @@ class _ToolbarItem extends StatelessWidget {
   }
 }
 
-class _VerseList extends StatelessWidget {
-  const _VerseList({
-    required this.chapter,
-    required this.highlightedVerse,
-    required this.fontScale,
-    required this.onTapVerse,
-  });
+// ---------------------------------------------------------------------------
+// Slim action bar
+// ---------------------------------------------------------------------------
+class _SlimActionBar extends StatelessWidget {
+  const _SlimActionBar({required this.onAction});
 
-  final Chapter chapter;
-  final int? highlightedVerse;
-  final double fontScale;
-  final ValueChanged<Verse> onTapVerse;
+  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        FjSpacing.gutter,
-        FjSpacing.lg,
-        FjSpacing.gutter,
-        FjSpacing.xxxl,
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.navy.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      itemCount: chapter.verses.length,
-      itemBuilder: (_, i) {
-        final v = chapter.verses[i];
-        final isHighlighted = v.number == highlightedVerse;
-        return InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => onTapVerse(v),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            margin: const EdgeInsets.only(bottom: FjSpacing.md),
-            padding: const EdgeInsets.symmetric(
-              horizontal: FjSpacing.md,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: isHighlighted
-                  ? FjColors.gold500.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  fontFamily: 'PlayfairDisplay',
-                  fontSize: 17 * fontScale,
-                  height: 1.55,
-                  color: FjColors.navy900,
-                ),
-                children: [
-                  TextSpan(
-                    text: '${v.number}  ',
-                    style: TextStyle(
-                      fontFamily: 'PlayfairDisplay',
-                      color: FjColors.gold500,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13 * fontScale,
-                    ),
-                  ),
-                  TextSpan(text: v.text),
-                ],
-              ),
+      child: Row(
+        children: [
+          _SlimItem(icon: AppIcons.heart, label: 'Save', onTap: onAction),
+          _SlimItem(
+              icon: AppIcons.reflect, label: 'Highlight', onTap: onAction),
+          _SlimItem(icon: AppIcons.noteLines, label: 'Note', onTap: onAction),
+          _SlimItem(icon: AppIcons.share, label: 'Share', onTap: onAction),
+        ],
+      ),
+    );
+  }
+}
+
+class _SlimItem extends StatelessWidget {
+  const _SlimItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final ValueChanged<String> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Expanded + FittedBox guarantees the four actions always fit, never
+    // overflowing on narrow screens.
+    return Expanded(
+      child: InkWell(
+        onTap: () => onTap(label),
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 19, color: AppColors.navy),
+                const SizedBox(width: 7),
+                Text(label,
+                    style: AppTextStyles.body
+                        .copyWith(color: AppColors.charcoal, fontSize: 14.5)),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chapter picker
+// ---------------------------------------------------------------------------
+class _ChapterPicker extends StatelessWidget {
+  const _ChapterPicker({
+    required this.bookName,
+    required this.chapters,
+    required this.selected,
+  });
+
+  final String bookName;
+  final List<int> chapters;
+  final int selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.placeholder.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text('$bookName — Chapters',
+                style: AppTextStyles.h2.copyWith(fontSize: 18)),
+            const SizedBox(height: 16),
+            Flexible(
+              child: GridView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.1,
+                ),
+                itemCount: chapters.length,
+                itemBuilder: (_, i) {
+                  final n = chapters[i];
+                  final active = n == selected;
+                  return InkWell(
+                    onTap: () => Navigator.of(context).pop(n),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.gold.withValues(alpha: 0.16)
+                            : AppColors.champagne.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.gold.withValues(alpha: 0.6)
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        '$n',
+                        style: AppTextStyles.body.copyWith(
+                          color: active ? AppColors.gold : AppColors.navy,
+                          fontWeight:
+                              active ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -548,18 +765,19 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(FjSpacing.xxl),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: FjColors.gray500, size: 48),
-            const SizedBox(height: FjSpacing.md),
+            const Icon(Icons.error_outline,
+                color: AppColors.warmGray, size: 48),
+            const SizedBox(height: 12),
             Text(
               'Could not load this chapter.\n$error',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: FjColors.gray500),
+              style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
             ),
-            const SizedBox(height: FjSpacing.md),
+            const SizedBox(height: 12),
             OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),

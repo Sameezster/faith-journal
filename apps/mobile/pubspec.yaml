@@ -39,7 +39,9 @@ dependencies:
   flutter_local_notifications: ^17.1.0
   # Platform detection (emulator vs real device, to pick the right API host)
   device_info_plus: ^11.2.0
-  # UI
+  # UI (client design system: Google Fonts + Lucide thin-line icons)
+  google_fonts: ^6.2.1
+  lucide_icons_flutter: ^3.0.0
   fj_core:
     path: ../../packages/fj_core
   fj_ui:
@@ -60,6 +62,13 @@ flutter:
   uses-material-design: true
   assets:
     - assets/bibles/
+    # Static Google Fonts bundled locally so google_fonts never fetches at
+    # runtime (offline-safe, no first-launch font flash).
+    - assets/google_fonts/
+    - assets/bg_img/
+    - assets/icons_img/
+    - assets/onboarding/
+    - assets/home_img/
   fonts:
     - family: PlayfairDisplay
       fonts:

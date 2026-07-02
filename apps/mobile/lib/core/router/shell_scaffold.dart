@@ -1,49 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../theme/tokens.dart';
+import '../../features/home/presentation/widgets/home_bottom_nav.dart';
 
-/// Bottom navigation shell: Home · Bible · Journal · Search · Prayer · Profile.
-/// Active tab uses navy icon/label with a gold indicator (per the design).
+/// Bottom navigation shell: Home · Bible · Journal · Prayer · Profile.
+/// Uses the client-design [HomeBottomNav] (constant navy icons; only the
+/// active label turns gold and gains a short underline).
 class ShellScaffold extends StatelessWidget {
   const ShellScaffold({required this.shell, super.key});
   final StatefulNavigationShell shell;
-
-  static const _items = [
-    (icon: Icons.home_outlined, label: 'Home'),
-    (icon: Icons.menu_book_outlined, label: 'Bible'),
-    (icon: Icons.bookmark_border, label: 'Journal'),
-    (icon: Icons.search, label: 'Search'),
-    (icon: Icons.volunteer_activism_outlined, label: 'Prayer'),
-    (icon: Icons.person_outline, label: 'Profile'),
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: shell,
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: FjColors.surface0,
-          indicatorColor: FjColors.gold300.withValues(alpha: 0.35),
-          labelTextStyle: WidgetStateProperty.resolveWith(
-            (s) => TextStyle(
-              fontSize: 11,
-              color: s.contains(WidgetState.selected)
-                  ? FjColors.navy900
-                  : FjColors.gray500,
-            ),
-          ),
-        ),
-        child: NavigationBar(
-          selectedIndex: shell.currentIndex,
-          onDestinationSelected: (i) =>
-              shell.goBranch(i, initialLocation: i == shell.currentIndex),
-          destinations: [
-            for (final it in _items)
-              NavigationDestination(icon: Icon(it.icon), label: it.label),
-          ],
-        ),
+      bottomNavigationBar: HomeBottomNav(
+        currentIndex: shell.currentIndex,
+        onTap: (i) =>
+            shell.goBranch(i, initialLocation: i == shell.currentIndex),
       ),
     );
   }

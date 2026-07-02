@@ -39,7 +39,8 @@ const _publicRoutes = <String>{
 };
 
 /// GoRouter with a StatefulShellRoute for the 5-tab bottom nav
-/// (Home · Bible · Journal · Prayer · Profile). Auth/onboarding live outside the shell.
+/// (Home · Bible · Journal · Prayer · Profile). Auth/onboarding and Search
+/// live outside the shell.
 ///
 /// Redirect logic:
 ///   - Unauthenticated user on a protected route -> /welcome
@@ -113,7 +114,13 @@ GoRouter router(RouterRef ref) {
         path: '/reminders',
         builder: (_, __) => const RemindersScreen(),
       ),
-      // Bible search + chapter reader (full-screen).
+      // Search (full-screen, outside the bottom-nav shell — the design's
+      // bottom nav has 5 tabs; Search is reached from the Home quick actions).
+      GoRoute(
+        path: '/search',
+        builder: (_, __) => const SearchScreen(),
+      ),
+      // Bible search (full-screen).
       GoRoute(
         path: '/bible/search',
         builder: (_, __) => const BibleSearchScreen(),
@@ -121,14 +128,6 @@ GoRouter router(RouterRef ref) {
       GoRoute(
         path: '/saved-verses',
         builder: (_, __) => const SavedVersesScreen(),
-      ),
-      GoRoute(
-        path: '/bible/:translation/:book/:chapter',
-        builder: (_, state) => BibleChapterScreen(
-          translation: state.pathParameters['translation']!,
-          book: state.pathParameters['book']!,
-          chapter: int.parse(state.pathParameters['chapter']!),
-        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => ShellScaffold(shell: shell),
@@ -141,20 +140,27 @@ GoRouter router(RouterRef ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                  path: '/bible',
-                  builder: (_, __) => const BibleBrowserScreen()),
+                path: '/bible',
+                builder: (_, __) => const BibleBrowserScreen(),
+                routes: [
+                  // Chapter reader lives inside the Bible tab so the bottom
+                  // nav stays visible while reading (per the client design).
+                  GoRoute(
+                    path: ':translation/:book/:chapter',
+                    builder: (_, state) => BibleChapterScreen(
+                      translation: state.pathParameters['translation']!,
+                      book: state.pathParameters['book']!,
+                      chapter: int.parse(state.pathParameters['chapter']!),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
                   path: '/journal', builder: (_, __) => const JournalScreen()),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                  path: '/search', builder: (_, __) => const SearchScreen()),
             ],
           ),
           StatefulShellBranch(

@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/auth_widgets.dart';
+import '../../../../core/widgets/sparkle_divider.dart';
 import '../providers/auth_providers.dart';
 import 'auth_errors.dart';
 
+/// Sign Up screen — create a new account.
+///
+/// Soft glow + leaves background, logo, "Create Account" title, the three
+/// fields (name / email / password), a gold Sign Up button, social sign-in
+/// options and a Sign In link.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -17,6 +28,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _obscure = true;
   bool _busy = false;
 
   @override
@@ -56,69 +68,175 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(authRepositoryProvider).signInWithGoogle();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyAuthError(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _signInWithApple() {
+    // Apple Sign-In requires Apple Developer setup — not wired up yet.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Apple Sign-In isn't available yet.")),
+    );
+  }
+
+  void _goToLogin() {
+    context.pushReplacement('/login');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        leading: const BackButton(),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(FjSpacing.xxl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Create Account',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Begin your journey of faith and reflection.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FjColors.gray500),
-              ),
-              const SizedBox(height: FjSpacing.xxl),
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(hintText: 'Full name'),
-              ),
-              const SizedBox(height: FjSpacing.md),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: const InputDecoration(hintText: 'Email'),
-              ),
-              const SizedBox(height: FjSpacing.md),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(hintText: 'Password'),
-              ),
-              const SizedBox(height: FjSpacing.lg),
-              ElevatedButton(
-                onPressed: _busy ? null : _signUp,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(AppAssets.backgroundSoft, fit: BoxFit.cover),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Back arrow.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(AppIcons.backArrow, color: AppColors.navy),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Logo.
+                  Center(
+                    child: Image.asset(AppAssets.logo, width: 110),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Title.
+                  Text(
+                    'Create Account',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.appTitle.copyWith(fontSize: 32),
+                  ),
+                  const SizedBox(height: 14),
+                  const Center(
+                    child: SparkleDivider(lineWidth: 44, sparkleSize: 15),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Begin your journey of faith and reflection.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Fields.
+                  AppTextField(
+                    hint: 'Full Name',
+                    icon: AppIcons.person,
+                    controller: _name,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    hint: 'Email',
+                    icon: AppIcons.mail,
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    hint: 'Password',
+                    icon: AppIcons.lock,
+                    controller: _password,
+                    obscure: _obscure,
+                    onToggleObscure: () => setState(() => _obscure = !_obscure),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Primary action.
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _busy ? null : _signUp,
+                      child: _busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Sign Up'),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // "or continue with" divider.
+                  const OrDivider(),
+                  const SizedBox(height: 20),
+
+                  // Social buttons.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SocialButton(
+                          logo: AppAssets.googleLogo,
+                          label: 'Google',
+                          onTap: _signInWithGoogle,
                         ),
-                      )
-                    : const Text('Sign Up'),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: SocialButton(
+                          logo: AppAssets.appleLogo,
+                          label: 'Apple',
+                          onTap: _signInWithApple,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Sign In link.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account? ',
+                        style: AppTextStyles.body
+                            .copyWith(color: AppColors.warmGray),
+                      ),
+                      GestureDetector(
+                        onTap: _goToLogin,
+                        child: Text(
+                          'Sign In',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: _busy ? null : () => context.go('/login'),
-                child: const Text('Already have an account? Sign in'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

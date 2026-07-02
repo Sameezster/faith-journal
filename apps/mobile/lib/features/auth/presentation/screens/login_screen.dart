@@ -2,10 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/tokens.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_icons.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/auth_widgets.dart';
+import '../../../../core/widgets/sparkle_divider.dart';
 import '../providers/auth_providers.dart';
 import 'auth_errors.dart';
 
+/// Login screen — sign in to an existing account.
+///
+/// Soft glow + leaves background, logo in the glow, "Welcome Back" title,
+/// email + password fields, a Forgot password link, a gold Login button,
+/// social sign-in options and a Sign Up link.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,6 +27,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _obscure = true;
   bool _busy = false;
 
   @override
@@ -59,99 +71,159 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _signInWithApple() {
+    // Apple Sign-In requires Apple Developer setup — not wired up yet.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Apple Sign-In isn't available yet.")),
+    );
+  }
+
+  void _goToSignUp() {
+    context.pushReplacement('/register');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(FjSpacing.xxl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              Text(
-                'Welcome Back',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Sign in to continue your journey of faith.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FjColors.gray500),
-              ),
-              const SizedBox(height: FjSpacing.xxl),
-              TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: const InputDecoration(hintText: 'Email'),
-              ),
-              const SizedBox(height: FjSpacing.md),
-              TextField(
-                controller: _password,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  hintText: 'Password',
-                  suffixIcon: Icon(Icons.visibility_outlined),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _busy ? null : () => context.go('/reset-password'),
-                  child: const Text(
-                    'Forgot password?',
-                    style: TextStyle(color: FjColors.navy900),
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: _busy ? null : _signIn,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Login'),
-              ),
-              const SizedBox(height: FjSpacing.lg),
-              const Text(
-                'or continue with',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FjColors.gray500),
-              ),
-              const SizedBox(height: FjSpacing.md),
-              Row(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(AppAssets.backgroundSoft, fit: BoxFit.cover),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _signInWithGoogle,
-                      icon: const Icon(Icons.g_mobiledata),
-                      label: const Text('Google'),
+                  const SizedBox(height: 24),
+
+                  // Logo.
+                  Center(child: Image.asset(AppAssets.logo, width: 130)),
+                  const SizedBox(height: 24),
+
+                  // Title.
+                  Text(
+                    'Welcome Back',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.appTitle.copyWith(fontSize: 36),
+                  ),
+                  const SizedBox(height: 14),
+                  const Center(
+                    child: SparkleDivider(lineWidth: 44, sparkleSize: 15),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sign in to continue your journey of faith.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.copyWith(color: AppColors.warmGray),
+                  ),
+                  const SizedBox(height: 36),
+
+                  // Fields.
+                  AppTextField(
+                    hint: 'Email',
+                    icon: AppIcons.mail,
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    hint: 'Password',
+                    icon: AppIcons.lock,
+                    controller: _password,
+                    obscure: _obscure,
+                    onToggleObscure: () => setState(() => _obscure = !_obscure),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Forgot password.
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () => context.push('/reset-password'),
+                      child: Text(
+                        'Forgot password?',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.navy,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: FjSpacing.md),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.apple),
-                      label: const Text('Apple'),
+                  const SizedBox(height: 24),
+
+                  // Primary action.
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _busy ? null : _signIn,
+                      child: _busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Login'),
                     ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // "or continue with" divider.
+                  const OrDivider(),
+                  const SizedBox(height: 20),
+
+                  // Social buttons.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SocialButton(
+                          logo: AppAssets.googleLogo,
+                          label: 'Google',
+                          onTap: _signInWithGoogle,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: SocialButton(
+                          logo: AppAssets.appleLogo,
+                          label: 'Apple',
+                          onTap: _signInWithApple,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Sign Up link.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: AppTextStyles.body
+                            .copyWith(color: AppColors.warmGray),
+                      ),
+                      GestureDetector(
+                        onTap: _goToSignUp,
+                        child: Text(
+                          'Sign Up',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              TextButton(
-                onPressed: _busy ? null : () => context.go('/register'),
-                child: const Text("Don't have an account? Sign Up"),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

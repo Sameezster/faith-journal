@@ -14,7 +14,7 @@ class FaithJournalApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Faith Journal',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.light,
       // Allow scrolling on every input device. Default behavior only enables
       // touch + trackpad, which means a laptop emulator with a mouse can't
       // scroll. Explicitly include mouse + stylus so scrolling works
